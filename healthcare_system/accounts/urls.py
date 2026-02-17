@@ -10,4 +10,12 @@ urlpatterns = [
     path("doctor/", doctor_dashboard, name="doctor_dashboard"),
     path("hospital/", hospital_dashboard, name="hospital_dashboard"),
     path("admin/", admin_dashboard, name="admin_dashboard"),
+    path("admin/", admin_dashboard, name="admin_dashboard"),
+
+    path("approve-doctor/<int:doctor_id>/", approve_doctor, name="approve_doctor"),
+    path("reject-doctor/<int:doctor_id>/", reject_doctor, name="reject_doctor"),
+
+    path("approve-hospital/<int:hospital_id>/", approve_hospital, name="approve_hospital"),
+    path("reject-hospital/<int:hospital_id>/", reject_hospital, name="reject_hospital"),
+
 ]

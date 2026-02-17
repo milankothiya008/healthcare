@@ -159,6 +159,66 @@ def doctor_dashboard(request):
 def hospital_dashboard(request):
     return render(request, "dashboard.html", {"role": "Hospital"})
 
+from doctors.models import DoctorProfile
+from hospitals.models import HospitalProfile
+from patients.models import PatientProfile
+from django.contrib.auth.decorators import login_required
+
+
 @login_required
 def admin_dashboard(request):
-    return render(request, "dashboard.html", {"role": "System Admin"})
+
+    if request.user.role != "admin":
+        return redirect("login")
+
+    total_doctors = DoctorProfile.objects.count()
+    total_patients = PatientProfile.objects.count()
+    total_hospitals = HospitalProfile.objects.count()
+
+    pending_doctors = DoctorProfile.objects.filter(status="pending")
+    pending_hospitals = HospitalProfile.objects.filter(status="pending")
+
+    context = {
+        "total_doctors": total_doctors,
+        "total_patients": total_patients,
+        "total_hospitals": total_hospitals,
+        "pending_doctors": pending_doctors,
+        "pending_hospitals": pending_hospitals,
+    }
+
+    return render(request, "admin_dashboard.html", context)
+@login_required
+def approve_doctor(request, doctor_id):
+    if request.user.role == "admin":
+        doctor = DoctorProfile.objects.get(id=doctor_id)
+        doctor.status = "approved"
+        doctor.save()
+    return redirect("admin_dashboard")
+
+
+@login_required
+def reject_doctor(request, doctor_id):
+    if request.user.role == "admin":
+        doctor = DoctorProfile.objects.get(id=doctor_id)
+        doctor.status = "rejected"
+        doctor.save()
+    return redirect("admin_dashboard")
+
+
+@login_required
+def approve_hospital(request, hospital_id):
+    if request.user.role == "admin":
+        hospital = HospitalProfile.objects.get(id=hospital_id)
+        hospital.status = "approved"
+        hospital.save()
+    return redirect("admin_dashboard")
+
+
+@login_required
+def reject_hospital(request, hospital_id):
+    if request.user.role == "admin":
+        hospital = HospitalProfile.objects.get(id=hospital_id)
+        hospital.status = "rejected"
+        hospital.save()
+    return redirect("admin_dashboard")
+
