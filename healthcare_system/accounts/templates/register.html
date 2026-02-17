@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Healthcare Registration</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #4e73df, #1cc88a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: white;
+            width: 420px;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4e73df;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #2e59d9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Register</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+
+        <select name="role" id="roleSelect" required>
+            <option value="">Select Role</option>
+            <option value="patient">Patient</option>
+            <option value="doctor">Doctor</option>
+            <option value="hospital">Hospital Admin</option>
+        </select>
+
+        <!-- Patient Fields -->
+        <div id="patientFields" class="hidden">
+            <input type="text" name="p_first_name" placeholder="First Name">
+            <input type="text" name="p_last_name" placeholder="Last Name">
+            <select name="p_gender">
+                <option value="">Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+            <input type="date" name="p_dob">
+            <input type="text" name="p_phone" placeholder="Phone">
+            <input type="text" name="p_address" placeholder="Address">
+        </div>
+
+        <!-- Doctor Fields -->
+        <div id="doctorFields" class="hidden">
+            <input type="text" name="d_first_name" placeholder="First Name">
+            <input type="text" name="d_last_name" placeholder="Last Name">
+            <input type="text" name="specialization" placeholder="Specialization">
+            <input type="number" name="experience" placeholder="Experience Years">
+            <input type="text" name="d_phone" placeholder="Phone">
+            <input type="text" name="hospital_name" placeholder="Hospital Name">
+            <input type="file" name="document">
+        </div>
+
+        <!-- Hospital Fields -->
+        <div id="hospitalFields" class="hidden">
+            <input type="text" name="hospital_name" placeholder="Hospital Name">
+            <input type="text" name="h_phone" placeholder="Phone">
+            <input type="text" name="h_address" placeholder="Address">
+            <input type="text" name="city" placeholder="City">
+            <input type="text" name="state" placeholder="State">
+            <input type="file" name="document">
+        </div>
+
+        <button type="submit">Register</button>
+    </form>
+</div>
+
+<script>
+    const roleSelect = document.getElementById("roleSelect");
+    const patientFields = document.getElementById("patientFields");
+    const doctorFields = document.getElementById("doctorFields");
+    const hospitalFields = document.getElementById("hospitalFields");
+
+    roleSelect.addEventListener("change", function() {
+
+        patientFields.classList.add("hidden");
+        doctorFields.classList.add("hidden");
+        hospitalFields.classList.add("hidden");
+
+        if (this.value === "patient") {
+            patientFields.classList.remove("hidden");
+            patientFields.classList.add("fade");
+        }
+        else if (this.value === "doctor") {
+            doctorFields.classList.remove("hidden");
+            doctorFields.classList.add("fade");
+        }
+        else if (this.value === "hospital") {
+            hospitalFields.classList.remove("hidden");
+            hospitalFields.classList.add("fade");
+        }
+    });
+</script>
+
+</body>
+</html>
