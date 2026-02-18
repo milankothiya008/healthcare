@@ -1,13 +1,14 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login
+from django.contrib.auth import authenticate, login
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+
 from .models import User
 from patients.models import PatientProfile
 from doctors.models import DoctorProfile
 from hospitals.models import HospitalProfile
 from documents.models import Document
-from django.contrib.auth import authenticate, logout
-from django.contrib.auth.decorators import login_required
+
 
 
 def register_view(request):
@@ -17,14 +18,19 @@ def register_view(request):
         password = request.POST.get("password")
         role = request.POST.get("role")
 
-        # Create user
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email already registered.")
+            return redirect("register")
+
+
         user = User.objects.create_user(
             email=email,
             password=password,
             role=role
         )
 
-        # Patient
+
         if role == "patient":
             PatientProfile.objects.create(
                 user=user,
@@ -39,9 +45,9 @@ def register_view(request):
             login(request, user)
             return redirect("patient_dashboard")
 
-        # Doctor
+
         elif role == "doctor":
-            doctor = DoctorProfile.objects.create(
+            DoctorProfile.objects.create(
                 user=user,
                 first_name=request.POST.get("d_first_name"),
                 last_name=request.POST.get("d_last_name"),
@@ -49,6 +55,7 @@ def register_view(request):
                 experience_years=request.POST.get("experience"),
                 phone=request.POST.get("d_phone"),
                 hospital_name=request.POST.get("hospital_name"),
+                profile_photo=request.FILES.get("profile_photo"),
                 status="pending"
             )
 
@@ -62,15 +69,15 @@ def register_view(request):
             messages.success(request, "Registration successful. Wait for admin approval.")
             return redirect("login")
 
-        # Hospital
         elif role == "hospital":
-            hospital = HospitalProfile.objects.create(
+            HospitalProfile.objects.create(
                 user=user,
                 hospital_name=request.POST.get("hospital_name"),
                 phone=request.POST.get("h_phone"),
                 address=request.POST.get("h_address"),
                 city=request.POST.get("city"),
                 state=request.POST.get("state"),
+                profile_photo=request.FILES.get("profile_photo"),
                 status="pending"
             )
 
@@ -85,11 +92,7 @@ def register_view(request):
             return redirect("login")
 
     return render(request, "register.html")
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
-from django.contrib import messages
-from doctors.models import DoctorProfile
-from hospitals.models import HospitalProfile
+
 
 
 def login_view(request):
@@ -100,69 +103,67 @@ def login_view(request):
 
         user = authenticate(request, email=email, password=password)
 
-        if user is not None:
-
-            # 🔹 Doctor Approval Check
-            if user.role == "doctor":
-                doctor_profile = DoctorProfile.objects.filter(user=user).first()
-
-                if not doctor_profile:
-                    messages.error(request, "Doctor profile not found.")
-                    return redirect("login")
-
-                if doctor_profile.status != "approved":
-                    messages.error(request, "Doctor account not approved yet.")
-                    return redirect("login")
-
-            # 🔹 Hospital Approval Check
-            if user.role == "hospital":
-                hospital_profile = HospitalProfile.objects.filter(user=user).first()
-
-                if not hospital_profile:
-                    messages.error(request, "Hospital profile not found.")
-                    return redirect("login")
-
-                if hospital_profile.status != "approved":
-                    messages.error(request, "Hospital account not approved yet.")
-                    return redirect("login")
-
-            # 🔹 If everything OK → Login
-            login(request, user)
-
-            # 🔹 Redirect based on role
-            if user.role == "admin":
-                return redirect("admin_dashboard")
-
-            elif user.role == "doctor":
-                return redirect("doctor_dashboard")
-
-            elif user.role == "patient":
-                return redirect("patient_dashboard")
-
-            elif user.role == "hospital":
-                return redirect("hospital_dashboard")
-
-        else:
+        if user is None:
             messages.error(request, "Invalid email or password.")
+            return redirect("login")
+
+        if user.is_blocked:
+            messages.error(request, "Your account has been blocked by admin.")
+            return redirect("login")
+
+        if user.role == "doctor":
+            doctor_profile = DoctorProfile.objects.filter(user=user).first()
+
+            if not doctor_profile:
+                messages.error(request, "Doctor profile not found.")
+                return redirect("login")
+
+            if doctor_profile.status != "approved":
+                messages.error(request, "Doctor account not approved yet.")
+                return redirect("login")
+
+        if user.role == "hospital":
+            hospital_profile = HospitalProfile.objects.filter(user=user).first()
+
+            if not hospital_profile:
+                messages.error(request, "Hospital profile not found.")
+                return redirect("login")
+
+            if hospital_profile.status != "approved":
+                messages.error(request, "Hospital account not approved yet.")
+                return redirect("login")
+
+        login(request, user)
+
+        if user.role == "admin":
+            return redirect("admin_dashboard")
+        elif user.role == "doctor":
+            return redirect("doctor_dashboard")
+        elif user.role == "patient":
+            return redirect("patient_dashboard")
+        elif user.role == "hospital":
+            return redirect("hospital_dashboard")
 
     return render(request, "login.html")
+
+
+
 
 @login_required
 def patient_dashboard(request):
     return render(request, "dashboard.html", {"role": "Patient"})
 
+
 @login_required
 def doctor_dashboard(request):
     return render(request, "dashboard.html", {"role": "Doctor"})
+
 
 @login_required
 def hospital_dashboard(request):
     return render(request, "dashboard.html", {"role": "Hospital"})
 
-from doctors.models import DoctorProfile
-from hospitals.models import HospitalProfile
-from patients.models import PatientProfile
-from django.contrib.auth.decorators import login_required
+
 
 
 @login_required
@@ -187,38 +188,75 @@ def admin_dashboard(request):
     }
 
     return render(request, "admin_dashboard.html", context)
+
+
+
+
 @login_required
 def approve_doctor(request, doctor_id):
     if request.user.role == "admin":
-        doctor = DoctorProfile.objects.get(id=doctor_id)
-        doctor.status = "approved"
-        doctor.save()
+        doctor = DoctorProfile.objects.filter(id=doctor_id).first()
+        if doctor:
+            doctor.status = "approved"
+            doctor.save()
     return redirect("admin_dashboard")
 
 
 @login_required
 def reject_doctor(request, doctor_id):
     if request.user.role == "admin":
-        doctor = DoctorProfile.objects.get(id=doctor_id)
-        doctor.status = "rejected"
-        doctor.save()
+        doctor = DoctorProfile.objects.filter(id=doctor_id).first()
+        if doctor:
+            doctor.status = "rejected"
+            doctor.save()
     return redirect("admin_dashboard")
 
 
 @login_required
 def approve_hospital(request, hospital_id):
     if request.user.role == "admin":
-        hospital = HospitalProfile.objects.get(id=hospital_id)
-        hospital.status = "approved"
-        hospital.save()
+        hospital = HospitalProfile.objects.filter(id=hospital_id).first()
+        if hospital:
+            hospital.status = "approved"
+            hospital.save()
     return redirect("admin_dashboard")
 
 
 @login_required
 def reject_hospital(request, hospital_id):
     if request.user.role == "admin":
-        hospital = HospitalProfile.objects.get(id=hospital_id)
-        hospital.status = "rejected"
-        hospital.save()
+        hospital = HospitalProfile.objects.filter(id=hospital_id).first()
+        if hospital:
+            hospital.status = "rejected"
+            hospital.save()
     return redirect("admin_dashboard")
 
+
+
+
+@login_required
+def doctor_detail(request, doctor_id):
+    if request.user.role != "admin":
+        return redirect("login")
+
+    doctor = DoctorProfile.objects.filter(id=doctor_id).first()
+    documents = Document.objects.filter(user=doctor.user) if doctor else []
+
+    return render(request, "doctor_detail.html", {
+        "doctor": doctor,
+        "documents": documents,
+    })
+
+
+@login_required
+def hospital_detail(request, hospital_id):
+    if request.user.role != "admin":
+        return redirect("login")
+
+    hospital = HospitalProfile.objects.filter(id=hospital_id).first()
+    documents = Document.objects.filter(user=hospital.user) if hospital else []
+
+    return render(request, "hospital_detail.html", {
+        "hospital": hospital,
+        "documents": documents,
+    })

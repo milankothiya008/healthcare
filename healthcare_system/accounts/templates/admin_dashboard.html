@@ -2,65 +2,168 @@
 <html>
 <head>
     <title>System Admin Dashboard</title>
+
     <style>
-        body { font-family: Arial; background: #f4f6f9; padding: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            padding: 30px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
         .card {
             background: white;
             padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 10px;
+            border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
         }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-box {
+            flex: 1;
+            background: #4e73df;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .profile-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
         button {
-            padding: 5px 10px;
+            padding: 6px 12px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
         }
-        .approve { background: green; color: white; }
-        .reject { background: red; color: white; }
+
+        .view-btn {
+            background: #36b9cc;
+            color: white;
+        }
+
+        .approve {
+            background: green;
+            color: white;
+        }
+
+        .reject {
+            background: red;
+            color: white;
+        }
     </style>
 </head>
 <body>
 
 <h2>System Admin Dashboard</h2>
 
+<!-- STATISTICS -->
 <div class="card">
     <h3>Statistics</h3>
-    <p>Total Doctors: {{ total_doctors }}</p>
-    <p>Total Patients: {{ total_patients }}</p>
-    <p>Total Hospitals: {{ total_hospitals }}</p>
+    <div class="stats">
+        <div class="stat-box">
+            <h4>Total Doctors</h4>
+            <p>{{ total_doctors }}</p>
+        </div>
+        <div class="stat-box">
+            <h4>Total Patients</h4>
+            <p>{{ total_patients }}</p>
+        </div>
+        <div class="stat-box">
+            <h4>Total Hospitals</h4>
+            <p>{{ total_hospitals }}</p>
+        </div>
+    </div>
 </div>
 
+<!-- PENDING DOCTORS -->
 <div class="card">
     <h3>Pending Doctor Approvals</h3>
+
     {% for doctor in pending_doctors %}
-        <p>
-            {{ doctor.first_name }} {{ doctor.last_name }} -
-            <a href="{% url 'approve_doctor' doctor.id %}">
-                <button class="approve">Approve</button>
-            </a>
-            <a href="{% url 'reject_doctor' doctor.id %}">
-                <button class="reject">Reject</button>
-            </a>
-        </p>
+        <div class="profile-card">
+
+            <div class="profile-info">
+                {% if doctor.profile_photo %}
+                    <img src="{{ doctor.profile_photo.url }}">
+                {% else %}
+                    <img src="https://via.placeholder.com/60">
+                {% endif %}
+
+                <div>
+                    <strong>{{ doctor.first_name }} {{ doctor.last_name }}</strong><br>
+                    {{ doctor.specialization }}<br>
+                    {{ doctor.user.email }}
+                </div>
+            </div>
+
+            <div>
+                <a href="{% url 'doctor_detail' doctor.id %}">
+                    <button class="view-btn">View Details</button>
+                </a>
+            </div>
+
+        </div>
     {% empty %}
         <p>No pending doctors.</p>
     {% endfor %}
 </div>
 
+<!-- PENDING HOSPITALS -->
 <div class="card">
     <h3>Pending Hospital Approvals</h3>
+
     {% for hospital in pending_hospitals %}
-        <p>
-            {{ hospital.hospital_name }} -
-            <a href="{% url 'approve_hospital' hospital.id %}">
-                <button class="approve">Approve</button>
-            </a>
-            <a href="{% url 'reject_hospital' hospital.id %}">
-                <button class="reject">Reject</button>
-            </a>
-        </p>
+        <div class="profile-card">
+
+            <div class="profile-info">
+                {% if hospital.profile_photo %}
+                    <img src="{{ hospital.profile_photo.url }}">
+                {% else %}
+                    <img src="https://via.placeholder.com/60">
+                {% endif %}
+
+                <div>
+                    <strong>{{ hospital.hospital_name }}</strong><br>
+                    {{ hospital.city }}, {{ hospital.state }}<br>
+                    {{ hospital.user.email }}
+                </div>
+            </div>
+
+            <div>
+                <a href="{% url 'hospital_detail' hospital.id %}">
+                    <button class="view-btn">View Details</button>
+                </a>
+            </div>
+
+        </div>
     {% empty %}
         <p>No pending hospitals.</p>
     {% endfor %}

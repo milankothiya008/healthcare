@@ -1,0 +1,33 @@
+<h2>Doctor Profile</h2>
+
+{% if doctor.profile_photo %}
+    <img src="{{ doctor.profile_photo.url }}" width="120" style="border-radius:50%;">
+{% endif %}
+
+<p>Email: {{ doctor.user.email }}</p>
+<p>Name: {{ doctor.first_name }} {{ doctor.last_name }}</p>
+<p>Specialization: {{ doctor.specialization }}</p>
+<p>Experience: {{ doctor.experience_years }} years</p>
+<p>Phone: {{ doctor.phone }}</p>
+<p>Hospital: {{ doctor.hospital_name }}</p>
+
+<h3>Documents</h3>
+
+{% for doc in documents %}
+    <p>
+        {{ doc.document_type }} :
+        <a href="{{ doc.file.url }}" target="_blank">View</a>
+    </p>
+{% empty %}
+    <p>No documents uploaded.</p>
+{% endfor %}
+
+<br>
+
+<a href="{% url 'approve_doctor' doctor.id %}">
+    <button style="background:green;color:white;">Approve</button>
+</a>
+
+<a href="{% url 'reject_doctor' doctor.id %}">
+    <button style="background:red;color:white;">Reject</button>
+</a>

@@ -16,6 +16,6 @@ class HospitalProfile(models.Model):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-
+    profile_photo = models.ImageField(upload_to='doctor_photos/', null=True, blank=True)
     def __str__(self):
         return self.hospital_name

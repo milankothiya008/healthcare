@@ -17,5 +17,7 @@ urlpatterns = [
 
     path("approve-hospital/<int:hospital_id>/", approve_hospital, name="approve_hospital"),
     path("reject-hospital/<int:hospital_id>/", reject_hospital, name="reject_hospital"),
+    path("doctor-detail/<int:doctor_id>/", doctor_detail, name="doctor_detail"),
+    path("hospital-detail/<int:hospital_id>/", hospital_detail, name="hospital_detail"),
 
 ]

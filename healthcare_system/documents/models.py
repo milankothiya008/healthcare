@@ -14,6 +14,7 @@ class Document(models.Model):
     file = models.FileField(upload_to='documents/')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     rejection_reason = models.TextField(blank=True, null=True)
+    
 
     def __str__(self):
         return f"{self.user.email} - {self.document_type}"
