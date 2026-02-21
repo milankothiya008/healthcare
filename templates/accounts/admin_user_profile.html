@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - {{ profile_user.get_full_name|default:profile_user.username }}{% endblock %}
+
+{% block content %}
+<style>
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
+    }
+    .btn-danger, .btn-success {
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    .badge {
+        font-weight: 500;
+    }
+</style>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'accounts:admin_dashboard' %}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> Dashboard</a>
+            {% if profile_user.role == 'PATIENT' %}
+            <a href="{% url 'accounts:admin_patient_list' %}" class="btn btn-outline-primary">Back to Patients</a>
+            {% elif profile_user.role == 'DOCTOR' %}
+            <a href="{% url 'accounts:admin_doctor_list' %}" class="btn btn-outline-primary">Back to Doctors</a>
+            {% elif profile_user.role == 'HOSPITAL' %}
+            <a href="{% url 'accounts:admin_hospital_list' %}" class="btn btn-outline-primary">Back to Hospitals</a>
+            {% else %}
+            <a href="{% url 'accounts:admin_user_list' %}" class="btn btn-outline-primary">Back to Users</a>
+            {% endif %}
+        </div>
+        {% if not profile_user.is_admin %}
+        <div>
+            {% if profile_user.is_active %}
+            <form method="post" action="{% url 'accounts:block_user' profile_user.pk %}" onsubmit="return confirm('Are you sure you want to block this user? They will not be able to login.');" class="d-inline m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-lock-fill me-2"></i> Block User
+                </button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'accounts:unblock_user' profile_user.pk %}" onsubmit="return confirm('Are you sure you want to unblock this user?');" class="d-inline m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-unlock-fill me-2"></i> Unblock User
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if profile_user.profile_picture %}
+                    <img src="{{ profile_user.profile_picture.url }}" alt="Profile" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                    {% else %}
+                    <i class="bi bi-person-circle text-muted" style="font-size: 6rem;"></i>
+                    {% endif %}
+                    <h4 class="mb-1">{{ profile_user.get_full_name|default:profile_user.username }}</h4>
+                    <p class="text-muted mb-0">{{ profile_user.email }}</p>
+                    <span class="badge bg-primary mt-2">{{ profile_user.get_role_display }}</span>
+                    {% if profile_user.role in 'DOCTOR,HOSPITAL' %}
+                    <div class="mt-2">
+                        {% if profile_user.is_approved %}
+                        <span class="badge bg-success">Approved</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Pending Approval</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="mt-2">
+                        {% if profile_user.is_active %}
+                        <span class="badge bg-success fs-6 px-3 py-2">
+                            <i class="bi bi-check-circle-fill"></i> Account Active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger fs-6 px-3 py-2">
+                            <i class="bi bi-x-circle-fill"></i> Account Blocked
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if not profile_user.is_admin %}
+                    <div class="mt-4">
+                        {% if profile_user.is_active %}
+                        <form method="post" action="{% url 'accounts:block_user' profile_user.pk %}" onsubmit="return confirm('Are you sure you want to block this user? They will not be able to login.');" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="bi bi-lock-fill me-2"></i> Block User Account
+                            </button>
+                        </form>
+                        {% else %}
+                        <form method="post" action="{% url 'accounts:unblock_user' profile_user.pk %}" onsubmit="return confirm('Are you sure you want to unblock this user?');" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-unlock-fill me-2"></i> Unblock User Account
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="mt-3">
+                        <span class="text-muted small">
+                            <i class="bi bi-shield-check"></i> Admin accounts cannot be blocked
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">Account Information</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Username</label>
+                            <p class="mb-0">{{ profile_user.username }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Email</label>
+                            <p class="mb-0">{{ profile_user.email }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Phone</label>
+                            <p class="mb-0">{{ profile_user.phone_number|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Address</label>
+                            <p class="mb-0">{{ profile_user.address|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Joined</label>
+                            <p class="mb-0">{{ profile_user.created_at|date:"F d, Y" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Last login</label>
+                            <p class="mb-0">{{ profile_user.last_login|date:"F d, Y H:i"|default:"Never" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Account Status</label>
+                            <p class="mb-0">
+                                {% if profile_user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Blocked</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if profile_user.role == 'DOCTOR' and profile_user.doctor_profile %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white"><h5 class="mb-0">Doctor Profile</h5></div>
+                <div class="card-body">
+                    {% with dp=profile_user.doctor_profile %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">License Number</label>
+                            <p class="mb-0">{{ dp.license_number }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Specialization</label>
+                            <p class="mb-0">{{ dp.get_specialization_display }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Qualification</label>
+                            <p class="mb-0">{{ dp.qualification }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Years of Experience</label>
+                            <p class="mb-0">{{ dp.years_of_experience }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Consultation Fee</label>
+                            <p class="mb-0">${{ dp.consultation_fee }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Available</label>
+                            <p class="mb-0">{% if dp.is_available %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</p>
+                        </div>
+                        {% if dp.hospital %}
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small">Hospital</label>
+                            <p class="mb-0">{{ dp.hospital.name }}</p>
+                        </div>
+                        {% endif %}
+                        {% if dp.bio %}
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small">Bio</label>
+                            <p class="mb-0">{{ dp.bio }}</p>
+                        </div>
+                        {% endif %}
+                        {% if dp.verification_document %}
+                        <div class="col-12">
+                            <a href="{{ dp.verification_document.url }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark-pdf"></i> View Verification Document</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if profile_user.role == 'PATIENT' and profile_user.patient_profile %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white"><h5 class="mb-0">Patient Profile</h5></div>
+                <div class="card-body">
+                    {% with pp=profile_user.patient_profile %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Date of Birth</label>
+                            <p class="mb-0">{{ pp.date_of_birth|date:"F d, Y"|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Age</label>
+                            <p class="mb-0">{{ pp.age|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Gender</label>
+                            <p class="mb-0">{{ pp.get_gender_display|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Blood Group</label>
+                            <p class="mb-0">{{ pp.blood_group|default:"—" }}</p>
+                        </div>
+                        {% if pp.emergency_contact_name %}
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Emergency Contact</label>
+                            <p class="mb-0">{{ pp.emergency_contact_name }} - {{ pp.emergency_contact_phone }}</p>
+                        </div>
+                        {% endif %}
+                        {% if pp.medical_history %}
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small">Medical History</label>
+                            <p class="mb-0">{{ pp.medical_history }}</p>
+                        </div>
+                        {% endif %}
+                        {% if pp.allergies %}
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small">Allergies</label>
+                            <p class="mb-0">{{ pp.allergies }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if profile_user.role == 'HOSPITAL' and profile_user.hospital_profile %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark"><h5 class="mb-0">Hospital Details</h5></div>
+                <div class="card-body">
+                    {% with hosp=profile_user.hospital_profile %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Hospital Name</label>
+                            <p class="mb-0">{{ hosp.name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Registration Number</label>
+                            <p class="mb-0">{{ hosp.registration_number }}</p>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small">Address</label>
+                            <p class="mb-0">{{ hosp.address|default:"—" }}{% if hosp.city %}, {{ hosp.city }}{% endif %}{% if hosp.state %} {{ hosp.state }}{% endif %}{% if hosp.zip_code %} {{ hosp.zip_code }}{% endif %}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Phone</label>
+                            <p class="mb-0">{{ hosp.phone|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Email</label>
+                            <p class="mb-0">{{ hosp.email|default:"—" }}</p>
+                        </div>
+                        {% if hosp.website %}
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Website</label>
+                            <p class="mb-0"><a href="{{ hosp.website }}" target="_blank">{{ hosp.website }}</a></p>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Beds</label>
+                            <p class="mb-0">{{ hosp.available_beds }} / {{ hosp.total_beds }} available</p>
+                        </div>
+                        {% if hosp.description %}
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small">Description</label>
+                            <p class="mb-0">{{ hosp.description }}</p>
+                        </div>
+                        {% endif %}
+                        {% if hosp.verification_document %}
+                        <div class="col-12">
+                            <a href="{{ hosp.verification_document.url }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark-pdf"></i> View Verification Document</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

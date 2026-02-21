@@ -12,6 +12,13 @@ class RoleRequiredMixin(LoginRequiredMixin):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
         
+        # Check if user account is blocked
+        if not request.user.is_active:
+            from django.contrib.auth import logout
+            logout(request)
+            messages.error(request, 'Your account has been blocked. Please contact the administrator.')
+            return redirect('accounts:login')
+        
         if request.user.role not in self.allowed_roles:
             messages.error(request, "You don't have permission to access this page.")
             return redirect('accounts:dashboard_redirect')

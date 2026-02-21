@@ -8,62 +8,74 @@
         <h2><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
     </div>
     
-    <!-- Statistics Cards -->
+    <!-- Statistics Cards (click to view list) -->
     <div class="row mb-4">
         <div class="col-md-3 mb-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-2">Total Users</h6>
-                            <h2 class="mb-0">{{ total_users }}</h2>
+            <a href="{% url 'accounts:admin_user_list' %}" class="text-decoration-none">
+                <div class="card stat-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-white-50 mb-2">Total Users</h6>
+                                <h2 class="mb-0">{{ total_users }}</h2>
+                            </div>
+                            <i class="bi bi-people" style="font-size: 3rem; opacity: 0.5;"></i>
                         </div>
-                        <i class="bi bi-people" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <small class="text-white-50 d-block mt-2">Click to view all users</small>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         
         <div class="col-md-3 mb-3">
-            <div class="card stat-card success">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-2">Patients</h6>
-                            <h2 class="mb-0">{{ total_patients }}</h2>
+            <a href="{% url 'accounts:admin_patient_list' %}" class="text-decoration-none">
+                <div class="card stat-card success h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-white-50 mb-2">Patients</h6>
+                                <h2 class="mb-0">{{ total_patients }}</h2>
+                            </div>
+                            <i class="bi bi-person-heart" style="font-size: 3rem; opacity: 0.5;"></i>
                         </div>
-                        <i class="bi bi-person-heart" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <small class="text-white-50 d-block mt-2">Click to view all patients</small>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         
         <div class="col-md-3 mb-3">
-            <div class="card stat-card info">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-2">Doctors</h6>
-                            <h2 class="mb-0">{{ total_doctors }}</h2>
+            <a href="{% url 'accounts:admin_doctor_list' %}" class="text-decoration-none">
+                <div class="card stat-card info h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-white-50 mb-2">Doctors</h6>
+                                <h2 class="mb-0">{{ total_doctors }}</h2>
+                            </div>
+                            <i class="bi bi-heart-pulse" style="font-size: 3rem; opacity: 0.5;"></i>
                         </div>
-                        <i class="bi bi-heart-pulse" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <small class="text-white-50 d-block mt-2">Click to view all doctors</small>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         
         <div class="col-md-3 mb-3">
-            <div class="card stat-card warning">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-2">Hospitals</h6>
-                            <h2 class="mb-0">{{ total_hospitals }}</h2>
+            <a href="{% url 'accounts:admin_hospital_list' %}" class="text-decoration-none">
+                <div class="card stat-card warning h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-white-50 mb-2">Hospitals</h6>
+                                <h2 class="mb-0">{{ total_hospitals }}</h2>
+                            </div>
+                            <i class="bi bi-building" style="font-size: 3rem; opacity: 0.5;"></i>
                         </div>
-                        <i class="bi bi-building" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <small class="text-white-50 d-block mt-2">Click to view all hospitals</small>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
     

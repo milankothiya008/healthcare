@@ -14,6 +14,11 @@ urlpatterns = [
     
     # Role-based dashboards
     path('admin/dashboard/', views.AdminDashboardView.as_view(), name='admin_dashboard'),
+    path('admin/users/', views.AdminUserListView.as_view(), name='admin_user_list'),
+    path('admin/patients/', views.AdminPatientListView.as_view(), name='admin_patient_list'),
+    path('admin/doctors/', views.AdminDoctorListView.as_view(), name='admin_doctor_list'),
+    path('admin/hospitals/', views.AdminHospitalListView.as_view(), name='admin_hospital_list'),
+    path('admin/user/<int:pk>/', views.AdminUserProfileView.as_view(), name='admin_user_profile'),
     path('doctor/dashboard/', views.DoctorDashboardView.as_view(), name='doctor_dashboard'),
     path('patient/dashboard/', views.PatientDashboardView.as_view(), name='patient_dashboard'),
     path('hospital/dashboard/', views.HospitalDashboardView.as_view(), name='hospital_dashboard'),
@@ -23,4 +28,8 @@ urlpatterns = [
     path('admin/approve-hospital/<int:user_id>/', views.approve_hospital, name='approve_hospital'),
     path('admin/reject-doctor/<int:user_id>/', views.reject_doctor, name='reject_doctor'),
     path('admin/reject-hospital/<int:user_id>/', views.reject_hospital, name='reject_hospital'),
+    
+    # Block/Unblock actions
+    path('admin/block-user/<int:user_id>/', views.block_user, name='block_user'),
+    path('admin/unblock-user/<int:user_id>/', views.unblock_user, name='unblock_user'),
 ]

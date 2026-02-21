@@ -2,8 +2,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.views import LogoutView
 from django.contrib import messages
-from django.views.generic import CreateView, TemplateView
+from django.views.generic import CreateView, TemplateView, ListView, DetailView
 from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -89,28 +90,41 @@ def login_view(request):
         if form.is_valid():
             email = form.cleaned_data['email'].strip().lower()
             password = form.cleaned_data['password']
-            # Look up user by email, then authenticate with username
             try:
                 user_obj = User.objects.get(email__iexact=email)
-                user = authenticate(request, username=user_obj.username, password=password)
             except User.DoesNotExist:
-                user = None
-            
-            if user is not None:
-                # Check if doctor or hospital is approved before allowing login
-                if user.role in ['DOCTOR', 'HOSPITAL'] and not user.is_approved:
+                user_obj = None
+
+            # Check password manually so we can show the right message for blocked/pending users
+            # (authenticate() returns None for inactive users, so we'd only see "Invalid email or password")
+            if user_obj is not None and user_obj.check_password(password):
+                user = user_obj
+                # Account exists and password is correct — now check status
+                if not user.is_active:
                     messages.error(
-                        request, 
-                        'Your account is pending approval. Please wait for admin approval before logging in.'
+                        request,
+                        'Your account has been blocked. You cannot sign in. Please contact the administrator for assistance.'
                     )
                     return render(request, 'accounts/login.html', {'form': form})
-                
-                # Allow login for approved users or users who don't need approval (Admin, Patient)
+                if user.role == 'DOCTOR' and not user.is_approved:
+                    messages.warning(
+                        request,
+                        'Your doctor account is pending approval. You will be able to sign in after an administrator approves your account. Please wait or contact support.'
+                    )
+                    return render(request, 'accounts/login.html', {'form': form})
+                if user.role == 'HOSPITAL' and not user.is_approved:
+                    messages.warning(
+                        request,
+                        'Your hospital account is pending approval. You will be able to sign in after an administrator approves your account. Please wait or contact support.'
+                    )
+                    return render(request, 'accounts/login.html', {'form': form})
+                # All checks passed — log the user in
                 login(request, user)
                 messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
                 return redirect('accounts:dashboard_redirect')
-            else:
-                messages.error(request, 'Invalid email or password.')
+
+            # Wrong password or no user with this email
+            messages.error(request, 'Invalid email or password.')
     else:
         form = LoginForm()
     
@@ -129,6 +143,13 @@ class CustomLogoutView(LogoutView):
 def dashboard_redirect(request):
     """Redirect users to their role-specific dashboard"""
     if not request.user.is_authenticated:
+        return redirect('accounts:login')
+    
+    # Check if user account is blocked
+    if not request.user.is_active:
+        from django.contrib.auth import logout
+        logout(request)
+        messages.error(request, 'Your account has been blocked. Please contact the administrator.')
         return redirect('accounts:login')
     
     role = request.user.role
@@ -265,6 +286,86 @@ class HospitalDashboardView(HospitalRequiredMixin, TemplateView):
         return context
 
 
+# Admin list and profile views
+class AdminUserListView(AdminRequiredMixin, ListView):
+    """Admin: list all users"""
+    model = User
+    template_name = 'accounts/admin_user_list.html'
+    context_object_name = 'users'
+    paginate_by = 20
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return User.objects.select_related('doctor_profile', 'patient_profile', 'hospital_profile').order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['list_type'] = 'users'
+        context['page_title'] = 'All Users'
+        return context
+
+
+class AdminPatientListView(AdminRequiredMixin, ListView):
+    """Admin: list all patients"""
+    model = User
+    template_name = 'accounts/admin_user_list.html'
+    context_object_name = 'users'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return User.objects.filter(role='PATIENT').order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['list_type'] = 'patients'
+        context['page_title'] = 'All Patients'
+        return context
+
+
+class AdminDoctorListView(AdminRequiredMixin, ListView):
+    """Admin: list all doctors"""
+    model = User
+    template_name = 'accounts/admin_user_list.html'
+    context_object_name = 'users'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return User.objects.filter(role='DOCTOR').select_related('doctor_profile').order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['list_type'] = 'doctors'
+        context['page_title'] = 'All Doctors'
+        return context
+
+
+class AdminHospitalListView(AdminRequiredMixin, ListView):
+    """Admin: list all hospitals"""
+    model = User
+    template_name = 'accounts/admin_user_list.html'
+    context_object_name = 'users'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return User.objects.filter(role='HOSPITAL').select_related('hospital_profile').order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['list_type'] = 'hospitals'
+        context['page_title'] = 'All Hospitals'
+        return context
+
+
+class AdminUserProfileView(AdminRequiredMixin, DetailView):
+    """Admin: view a single user's profile"""
+    model = User
+    template_name = 'accounts/admin_user_profile.html'
+    context_object_name = 'profile_user'
+
+    def get_queryset(self):
+        return User.objects.select_related('doctor_profile', 'patient_profile', 'hospital_profile').all()
+
+
 # Approval views for Admin
 def approve_doctor(request, user_id):
     """Approve doctor accounts"""
@@ -334,3 +435,51 @@ def reject_hospital(request, user_id):
             messages.error(request, 'Hospital not found.')
     
     return redirect('accounts:admin_dashboard')
+
+
+def block_user(request, user_id):
+    """Block a user account"""
+    if not request.user.is_authenticated or not request.user.is_admin():
+        messages.error(request, 'Permission denied.')
+        return redirect('accounts:login')
+    
+    if request.method == 'POST':
+        try:
+            user = User.objects.get(id=user_id)
+            # Prevent blocking admin accounts
+            if user.is_admin():
+                messages.error(request, 'Cannot block admin accounts.')
+            else:
+                user.is_active = False
+                user.save()
+                messages.success(request, f'User {user.get_full_name() or user.username} has been blocked.')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+    
+    # Redirect back to the referring page or profile page
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+    return redirect('accounts:admin_user_profile', pk=user_id)
+
+
+def unblock_user(request, user_id):
+    """Unblock a user account"""
+    if not request.user.is_authenticated or not request.user.is_admin():
+        messages.error(request, 'Permission denied.')
+        return redirect('accounts:login')
+    
+    if request.method == 'POST':
+        try:
+            user = User.objects.get(id=user_id)
+            user.is_active = True
+            user.save()
+            messages.success(request, f'User {user.get_full_name() or user.username} has been unblocked.')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+    
+    # Redirect back to the referring page or profile page
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+    return redirect('accounts:admin_user_profile', pk=user_id)
