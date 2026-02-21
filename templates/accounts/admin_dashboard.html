@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Total Users</h6>
+                            <h2 class="mb-0">{{ total_users }}</h2>
+                        </div>
+                        <i class="bi bi-people" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Patients</h6>
+                            <h2 class="mb-0">{{ total_patients }}</h2>
+                        </div>
+                        <i class="bi bi-person-heart" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Doctors</h6>
+                            <h2 class="mb-0">{{ total_doctors }}</h2>
+                        </div>
+                        <i class="bi bi-heart-pulse" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Hospitals</h6>
+                            <h2 class="mb-0">{{ total_hospitals }}</h2>
+                        </div>
+                        <i class="bi bi-building" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Approvals -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Pending Doctor Approvals</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_doctors %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Verification</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in pending_doctors %}
+                                    <tr>
+                                        <td>
+                                            {% if item.user.profile_picture %}
+                                            <img src="{{ item.user.profile_picture.url }}" alt="Profile" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                                            {% else %}
+                                            <i class="bi bi-person-circle me-2" style="font-size: 1.5rem;"></i>
+                                            {% endif %}
+                                            {{ item.user.get_full_name|default:item.user.username }}
+                                        </td>
+                                        <td>{{ item.user.email }}</td>
+                                        <td>{{ item.user.phone_number }}</td>
+                                        <td>
+                                            {% if item.has_verification %}
+                                                <a href="{{ item.profile.verification_document.url }}" target="_blank" class="btn btn-sm btn-info">
+                                                    <i class="bi bi-file-earmark-pdf"></i> View Document
+                                                </a>
+                                            {% else %}
+                                                <span class="badge bg-danger">No Document</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <form method="post" action="{% url 'accounts:approve_doctor' item.user.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check-circle"></i> Approve
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{% url 'accounts:reject_doctor' item.user.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to reject this doctor?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="bi bi-x-circle"></i> Reject
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No pending doctor approvals.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Pending Hospital Approvals</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_hospitals %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Verification</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in pending_hospitals %}
+                                    <tr>
+                                        <td>
+                                            {% if item.user.profile_picture %}
+                                            <img src="{{ item.user.profile_picture.url }}" alt="Profile" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                                            {% else %}
+                                            <i class="bi bi-building me-2" style="font-size: 1.5rem;"></i>
+                                            {% endif %}
+                                            {{ item.hospital.name|default:item.user.username }}
+                                        </td>
+                                        <td>{{ item.user.email }}</td>
+                                        <td>{{ item.user.phone_number }}</td>
+                                        <td>
+                                            {% if item.has_verification %}
+                                                <a href="{{ item.hospital.verification_document.url }}" target="_blank" class="btn btn-sm btn-info">
+                                                    <i class="bi bi-file-earmark-pdf"></i> View Document
+                                                </a>
+                                            {% else %}
+                                                <span class="badge bg-danger">No Document</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <form method="post" action="{% url 'accounts:approve_hospital' item.user.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check-circle"></i> Approve
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{% url 'accounts:reject_hospital' item.user.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to reject this hospital?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="bi bi-x-circle"></i> Reject
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No pending hospital approvals.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
