@@ -9,7 +9,7 @@ from django.db.models import Q
 
 from .models import Appointment
 from doctors.models import DoctorProfile
-from hospitals.models import Hospital
+from hospitals.models import Hospital, DoctorHospitalAssignment
 from accounts.mixins import PatientRequiredMixin
 
 
@@ -60,8 +60,15 @@ def book_normal_appointment(request, doctor_id):
         return redirect('accounts:login')
 
     doctor = get_object_or_404(DoctorProfile, pk=doctor_id, user__is_approved=True, user__is_active=True)
-    if not doctor.hospital:
-        messages.error(request, 'This doctor is not associated with a hospital.')
+    # Hospitals where doctor works (legacy + assignments)
+    doctor_hospital_ids = set()
+    if doctor.hospital_id:
+        doctor_hospital_ids.add(doctor.hospital_id)
+    doctor_hospital_ids.update(
+        DoctorHospitalAssignment.objects.filter(doctor=doctor, is_active=True).values_list('hospital_id', flat=True)
+    )
+    if not doctor_hospital_ids:
+        messages.error(request, 'This doctor is not associated with any hospital.')
         return redirect('doctors:doctor_search')
 
     today = timezone.now().date()
@@ -90,11 +97,16 @@ def book_normal_appointment(request, doctor_id):
 
         hospital = None
         if hospital_id:
-            hospital = get_object_or_404(Hospital, pk=hospital_id)
-            if doctor.hospital_id != hospital.id:
+            try:
+                hid = int(hospital_id)
+                if hid not in doctor_hospital_ids:
+                    errors.append('Invalid hospital selection.')
+                else:
+                    hospital = Hospital.objects.get(pk=hid)
+            except (ValueError, Hospital.DoesNotExist):
                 errors.append('Invalid hospital selection.')
         else:
-            hospital = doctor.hospital
+            hospital = Hospital.objects.filter(pk__in=doctor_hospital_ids).first()
 
         if errors:
             for e in errors:
@@ -176,7 +188,7 @@ def confirm_emergency_booking(request):
         return redirect('appointments:emergency_booking')
 
     # Get first available doctor at this hospital for emergency
-    doctor_profile = hospital.doctors.filter(user__is_approved=True, user__is_active=True).first()
+    doctor_profile = hospital.get_doctors().filter(user__is_approved=True, user__is_active=True).first()
     if not doctor_profile:
         messages.error(request, 'No doctors available at this hospital for emergency.')
         return redirect('appointments:emergency_booking')

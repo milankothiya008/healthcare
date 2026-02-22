@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.views import LogoutView
 from django.contrib import messages
+from django.views import View
 from django.views.generic import CreateView, TemplateView, ListView, DetailView
+from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, Q
@@ -10,14 +12,14 @@ from django.utils import timezone
 from datetime import timedelta
 import uuid
 
-from .forms import UserRegistrationForm, LoginForm
+from .forms import UserRegistrationForm, LoginForm, DoctorProfileEditForm
 from .mixins import (
     AdminRequiredMixin, DoctorRequiredMixin, 
     PatientRequiredMixin, HospitalRequiredMixin
 )
 from .models import User
 from patients.models import PatientProfile
-from doctors.models import DoctorProfile
+from doctors.models import DoctorProfile, DoctorProfileUpdateRequest
 from hospitals.models import Hospital
 from appointments.models import Appointment
 from documents.models import Document
@@ -201,38 +203,97 @@ class AdminDashboardView(AdminRequiredMixin, TemplateView):
                 'has_verification': hospital.verification_document if hospital else False
             })
         context['pending_hospitals'] = pending_hospitals_list
-        
+        context['pending_profile_requests_count'] = DoctorProfileUpdateRequest.objects.filter(status='PENDING').count()
+
         return context
 
 
 class DoctorDashboardView(DoctorRequiredMixin, TemplateView):
-    """Doctor dashboard view"""
+    """Doctor dashboard view - dynamic summary; only own data"""
     template_name = 'accounts/doctor_dashboard.html'
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        doctor_profile = getattr(self.request.user, 'doctor_profile', None)
-        
-        # Statistics
-        context['total_appointments'] = Appointment.objects.filter(doctor=self.request.user).count()
-        context['today_appointments'] = Appointment.objects.filter(
-            doctor=self.request.user,
-            appointment_date=timezone.now().date()
-        ).count()
-        context['pending_appointments'] = Appointment.objects.filter(
-            doctor=self.request.user,
-            status='PENDING'
-        ).count()
-        context['upcoming_appointments'] = Appointment.objects.filter(
-            doctor=self.request.user,
-            appointment_date__gte=timezone.now().date(),
+        user = self.request.user
+        doctor_profile = getattr(user, 'doctor_profile', None)
+        today = timezone.now().date()
+
+        base_qs = Appointment.objects.filter(doctor=user)
+        context['today_appointments'] = base_qs.filter(appointment_date=today).count()
+        context['today_appointments_list'] = base_qs.filter(
+            appointment_date=today,
             status__in=['PENDING', 'CONFIRMED']
-        ).order_by('appointment_date', 'appointment_time')[:10]
-        
+        ).select_related('patient', 'hospital').order_by('appointment_time')
+        context['upcoming_appointments'] = base_qs.filter(
+            appointment_date__gte=today,
+            status__in=['PENDING', 'CONFIRMED']
+        ).select_related('patient', 'hospital').order_by('appointment_date', 'appointment_time')[:10]
+        context['total_completed_appointments'] = base_qs.filter(status='COMPLETED').count()
+        context['pending_requests'] = base_qs.filter(status='PENDING').count()
         context['doctor_profile'] = doctor_profile
-        
+        context['pending_profile_requests'] = DoctorProfileUpdateRequest.objects.filter(
+            doctor=doctor_profile, status='PENDING'
+        ).count() if doctor_profile else 0
         return context
+
+
+class DoctorProfileEditView(DoctorRequiredMixin, TemplateView):
+    """Doctor profile edit: non-sensitive saves immediately; sensitive creates update request"""
+    template_name = 'accounts/doctor_profile_edit.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        doctor_profile = getattr(self.request.user, 'doctor_profile', None)
+        context['doctor_profile'] = doctor_profile
+        context['form'] = DoctorProfileEditForm(user=self.request.user, doctor_profile=doctor_profile)
+        context['pending_requests'] = list(
+            DoctorProfileUpdateRequest.objects.filter(doctor=doctor_profile, status='PENDING').order_by('-created_at')
+        ) if doctor_profile else []
+        return context
+
+    def post(self, request, *args, **kwargs):
+        doctor_profile = getattr(request.user, 'doctor_profile', None)
+        if not doctor_profile:
+            messages.error(request, 'Doctor profile not found.')
+            return redirect('accounts:doctor_dashboard')
+        form = DoctorProfileEditForm(
+            request.POST, request.FILES,
+            user=request.user, doctor_profile=doctor_profile
+        )
+        if not form.is_valid():
+            context = self.get_context_data()
+            context['form'] = form
+            context['pending_requests'] = list(
+                DoctorProfileUpdateRequest.objects.filter(doctor=doctor_profile, status='PENDING').order_by('-created_at')
+            )
+            return render(request, self.template_name, context)
+        form.save_non_sensitive()
+        form.create_update_requests()
+        messages.success(
+            request,
+            'Profile updated. Non-sensitive changes are saved. Sensitive changes are pending admin approval.'
+        )
+        return redirect('accounts:doctor_profile_edit')
+
+
+class DoctorProfilePhotoUploadView(DoctorRequiredMixin, View):
+    """Upload profile photo (click on photo); updates immediately"""
+
+    def post(self, request):
+        doctor_profile = getattr(request.user, 'doctor_profile', None)
+        if not doctor_profile:
+            messages.error(request, 'Profile not found.')
+            return redirect('accounts:doctor_dashboard')
+        photo = request.FILES.get('profile_picture')
+        if not photo:
+            messages.error(request, 'No image provided.')
+            return redirect('accounts:doctor_profile_edit')
+        request.user.profile_picture = photo
+        request.user.save(update_fields=['profile_picture', 'updated_at'])
+        doctor_profile.profile_picture = photo
+        doctor_profile.save(update_fields=['profile_picture', 'updated_at'])
+        messages.success(request, 'Profile photo updated.')
+        return redirect('accounts:doctor_profile_edit')
 
 
 class PatientDashboardView(PatientRequiredMixin, TemplateView):
@@ -271,7 +332,7 @@ class HospitalDashboardView(HospitalRequiredMixin, TemplateView):
         
         # Statistics
         if hospital:
-            context['total_doctors'] = hospital.doctors.count()
+            context['total_doctors'] = hospital.get_doctors().count()
             context['total_appointments'] = Appointment.objects.filter(hospital=hospital).count()
             context['today_appointments'] = Appointment.objects.filter(
                 hospital=hospital,
@@ -366,6 +427,61 @@ class AdminUserProfileView(AdminRequiredMixin, DetailView):
 
     def get_queryset(self):
         return User.objects.select_related('doctor_profile', 'patient_profile', 'hospital_profile').all()
+
+
+class AdminDoctorProfileUpdateRequestListView(AdminRequiredMixin, ListView):
+    """System Admin: list doctor profile update requests (sensitive fields)"""
+    template_name = 'accounts/admin_doctor_profile_requests.html'
+    context_object_name = 'requests'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return DoctorProfileUpdateRequest.objects.filter(status='PENDING').select_related('doctor__user').order_by('-created_at')
+
+
+def admin_approve_doctor_profile_request(request, pk):
+    """Apply sensitive change to doctor profile and mark request approved"""
+    if not request.user.is_authenticated or not request.user.is_admin():
+        messages.error(request, 'Permission denied.')
+        return redirect('accounts:login')
+    req = get_object_or_404(DoctorProfileUpdateRequest, pk=pk, status='PENDING')
+    if request.method == 'POST':
+        from django.utils import timezone as tz
+        profile = req.doctor
+        if req.field_name == 'specialization':
+            profile.specialization = req.new_value_text
+            profile.save(update_fields=['specialization', 'updated_at'])
+        elif req.field_name == 'qualification':
+            profile.qualification = req.new_value_text
+            profile.save(update_fields=['qualification', 'updated_at'])
+        elif req.field_name == 'license_number':
+            profile.license_number = req.new_value_text
+            profile.save(update_fields=['license_number', 'updated_at'])
+        elif req.field_name == 'verification_document' and req.new_value_file:
+            profile.verification_document = req.new_value_file
+            profile.save(update_fields=['verification_document', 'updated_at'])
+        req.status = 'APPROVED'
+        req.reviewed_at = tz.now()
+        req.reviewed_by = request.user
+        req.save(update_fields=['status', 'reviewed_at', 'reviewed_by'])
+        messages.success(request, 'Doctor profile update approved and applied.')
+    return redirect('accounts:admin_doctor_profile_requests')
+
+
+def admin_reject_doctor_profile_request(request, pk):
+    """Reject request; no change to profile"""
+    if not request.user.is_authenticated or not request.user.is_admin():
+        messages.error(request, 'Permission denied.')
+        return redirect('accounts:login')
+    req = get_object_or_404(DoctorProfileUpdateRequest, pk=pk, status='PENDING')
+    if request.method == 'POST':
+        from django.utils import timezone as tz
+        req.status = 'REJECTED'
+        req.reviewed_at = tz.now()
+        req.reviewed_by = request.user
+        req.save(update_fields=['status', 'reviewed_at', 'reviewed_by'])
+        messages.success(request, 'Doctor profile update rejected.')
+    return redirect('accounts:admin_doctor_profile_requests')
 
 
 # Approval views for Admin

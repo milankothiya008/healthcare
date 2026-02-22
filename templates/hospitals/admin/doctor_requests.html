@@ -18,8 +18,9 @@
                         <tr>
                             <th>Doctor</th>
                             <th>Specialization</th>
-                            <th>Experience</th>
+                            <th>Expected monthly salary</th>
                             <th>Qualification</th>
+                            <th>Experience</th>
                             <th>Requested</th>
                             <th>Actions</th>
                         </tr>
@@ -38,8 +39,9 @@
                                 </a>
                             </td>
                             <td>{{ req.doctor.get_specialization_display }}</td>
-                            <td>{{ req.doctor.years_of_experience }} yrs</td>
+                            <td>{% if req.expected_monthly_salary is not None %}{{ req.expected_monthly_salary }}{% else %}—{% endif %}</td>
                             <td>{{ req.doctor.qualification|truncatewords:5 }}</td>
+                            <td>{{ req.doctor.years_of_experience }} yrs</td>
                             <td>{{ req.created_at|date:"M d, Y" }}</td>
                             <td>
                                 <form method="post" action="{% url 'hospitals:admin_approve_doctor_request' req.pk %}" class="d-inline">

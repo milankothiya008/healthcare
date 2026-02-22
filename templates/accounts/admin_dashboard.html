@@ -93,6 +93,23 @@
         </div>
         
         <div class="col-md-3 mb-3">
+            <a href="{% url 'accounts:admin_doctor_profile_requests' %}" class="text-decoration-none">
+                <div class="card stat-card h-100" style="background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-white-50 mb-2">Profile update requests</h6>
+                                <h2 class="mb-0">{{ pending_profile_requests_count|default:0 }}</h2>
+                            </div>
+                            <i class="bi bi-pencil-square" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                        <small class="text-white-50 d-block mt-2">Doctor sensitive-field changes</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3 mb-3">
             <a href="{% url 'accounts:admin_hospital_list' %}" class="text-decoration-none">
                 <div class="card stat-card warning h-100">
                     <div class="card-body">

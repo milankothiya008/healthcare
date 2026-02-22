@@ -53,3 +53,65 @@ class DoctorProfile(models.Model):
     
     def __str__(self):
         return f"Dr. {self.user.get_full_name() or self.user.username} - {self.get_specialization_display()}"
+
+
+class DoctorProfileUpdateRequest(models.Model):
+    """Sensitive profile changes require System Admin approval"""
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+    FIELD_CHOICES = [
+        ('specialization', 'Specialization'),
+        ('qualification', 'Qualification'),
+        ('license_number', 'License Number'),
+        ('verification_document', 'Verification Document'),
+    ]
+    doctor = models.ForeignKey(
+        DoctorProfile,
+        on_delete=models.CASCADE,
+        related_name='profile_update_requests'
+    )
+    field_name = models.CharField(max_length=50, choices=FIELD_CHOICES)
+    new_value_text = models.CharField(max_length=500, blank=True)
+    new_value_file = models.FileField(upload_to='doctor_update_requests/', blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_doctor_updates'
+    )
+
+    class Meta:
+        db_table = 'doctor_profile_update_requests'
+        verbose_name = 'Doctor Profile Update Request'
+        verbose_name_plural = 'Doctor Profile Update Requests'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.doctor} - {self.get_field_name_display()} ({self.status})"
+
+
+class DoctorLeave(models.Model):
+    """Blocked dates for doctor leave; no appointments bookable"""
+    doctor = models.ForeignKey(
+        DoctorProfile,
+        on_delete=models.CASCADE,
+        related_name='leave_dates'
+    )
+    leave_date = models.DateField()
+
+    class Meta:
+        db_table = 'doctor_leave'
+        verbose_name = 'Doctor Leave'
+        verbose_name_plural = 'Doctor Leave'
+        unique_together = ('doctor', 'leave_date')
+        ordering = ['leave_date']
+
+    def __str__(self):
+        return f"{self.doctor} - {self.leave_date}"

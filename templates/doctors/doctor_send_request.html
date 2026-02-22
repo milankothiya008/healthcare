@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Send Work Request — {{ hospital.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'doctors:doctor_hospital_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Hospitals</a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Send work request to <strong>{{ hospital.name }}</strong></h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Enter your <strong>expected monthly salary</strong>. The hospital admin can only approve or reject; there is no negotiation. If approved, this amount becomes your final salary at this hospital.</p>
+                    <form method="post" action="{% url 'doctors:request_join_hospital' hospital.id %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_salary" class="form-label">Expected monthly salary</label>
+                            <input type="number" name="expected_monthly_salary" id="id_salary" class="form-control" step="0.01" min="0" required placeholder="e.g. 50000">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Send request</button>
+                            <a href="{% url 'doctors:doctor_hospital_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

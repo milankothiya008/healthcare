@@ -32,14 +32,21 @@ class AdminRequiredMixin(RoleRequiredMixin):
 
 
 class DoctorRequiredMixin(RoleRequiredMixin):
-    """Mixin to require Doctor role"""
+    """Mixin to require Doctor role - explicit role check so e.g. Hospital Admin cannot access doctor pages"""
     allowed_roles = ['DOCTOR']
-    
+
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_approved:
+        # 1) Parent checks is_authenticated and role in allowed_roles (redirects if not)
+        result = super().dispatch(request, *args, **kwargs)
+        # 2) Explicit role check: only DOCTOR may access (defense in depth; blocks e.g. hospital user)
+        if request.user.is_authenticated and getattr(request.user, 'role', None) != 'DOCTOR':
+            messages.error(request, "You don't have permission to access this page.")
+            return redirect('accounts:dashboard_redirect')
+        # 3) Doctor must be approved
+        if request.user.is_authenticated and not getattr(request.user, 'is_approved', True):
             messages.warning(request, "Your account is pending approval. Please wait for admin approval.")
             return redirect('accounts:dashboard_redirect')
-        return super().dispatch(request, *args, **kwargs)
+        return result
 
 
 class PatientRequiredMixin(RoleRequiredMixin):
@@ -48,14 +55,18 @@ class PatientRequiredMixin(RoleRequiredMixin):
 
 
 class HospitalRequiredMixin(RoleRequiredMixin):
-    """Mixin to require Hospital Admin role - only own hospital data"""
+    """Mixin to require Hospital Admin role - explicit check so e.g. Doctor cannot access hospital admin pages"""
     allowed_roles = ['HOSPITAL', 'HOSPITAL_ADMIN']
-    
+
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_approved:
+        result = super().dispatch(request, *args, **kwargs)
+        if request.user.is_authenticated and getattr(request.user, 'role', None) not in ('HOSPITAL', 'HOSPITAL_ADMIN'):
+            messages.error(request, "You don't have permission to access this page.")
+            return redirect('accounts:dashboard_redirect')
+        if request.user.is_authenticated and not getattr(request.user, 'is_approved', True):
             messages.warning(request, "Your account is pending approval. Please wait for admin approval.")
             return redirect('accounts:dashboard_redirect')
-        return super().dispatch(request, *args, **kwargs)
+        return result
 
 
 class ApprovedUserMixin(LoginRequiredMixin):

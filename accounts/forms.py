@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import User
+from doctors.models import DoctorProfile, DoctorProfileUpdateRequest
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -152,3 +153,65 @@ class LoginForm(forms.Form):
             'placeholder': 'Password'
         })
     )
+
+
+class DoctorProfileEditForm(forms.Form):
+    """Doctor profile: non-sensitive (save immediately) and sensitive (create update request)"""
+    # Non-sensitive - applied immediately
+    phone_number = forms.CharField(max_length=15, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    address = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
+    profile_picture = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}))
+
+    # Sensitive - create DoctorProfileUpdateRequest
+    specialization = forms.ChoiceField(choices=DoctorProfile.SPECIALIZATION_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
+    qualification = forms.CharField(max_length=200, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    license_number = forms.CharField(max_length=50, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    verification_document = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png'}))
+
+    def __init__(self, *args, user=None, doctor_profile=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        self.doctor_profile = doctor_profile
+        if user:
+            self.fields['phone_number'].initial = user.phone_number
+            self.fields['address'].initial = user.address
+        if doctor_profile:
+            self.fields['specialization'].initial = doctor_profile.specialization
+            self.fields['qualification'].initial = doctor_profile.qualification
+            self.fields['license_number'].initial = doctor_profile.license_number
+
+    def save_non_sensitive(self):
+        if not self.user:
+            return
+        self.user.phone_number = self.cleaned_data.get('phone_number', '')
+        self.user.address = self.cleaned_data.get('address', '')
+        if self.cleaned_data.get('profile_picture'):
+            self.user.profile_picture = self.cleaned_data['profile_picture']
+        self.user.save(update_fields=['phone_number', 'address', 'profile_picture', 'updated_at'])
+        if self.doctor_profile and self.cleaned_data.get('profile_picture'):
+            self.doctor_profile.profile_picture = self.cleaned_data['profile_picture']
+            self.doctor_profile.save(update_fields=['profile_picture', 'updated_at'])
+
+    def create_update_requests(self):
+        """Create PENDING DoctorProfileUpdateRequest for each changed sensitive field"""
+        if not self.doctor_profile:
+            return
+        for field in ('specialization', 'qualification', 'license_number'):
+            new_val = self.cleaned_data.get(field)
+            if new_val is None:
+                continue
+            current = getattr(self.doctor_profile, field, None)
+            if str(new_val) != str(current):
+                DoctorProfileUpdateRequest.objects.create(
+                    doctor=self.doctor_profile,
+                    field_name=field,
+                    new_value_text=str(new_val),
+                    status='PENDING'
+                )
+        if self.cleaned_data.get('verification_document'):
+            DoctorProfileUpdateRequest.objects.create(
+                doctor=self.doctor_profile,
+                field_name='verification_document',
+                new_value_file=self.cleaned_data['verification_document'],
+                status='PENDING'
+            )

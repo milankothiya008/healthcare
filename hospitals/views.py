@@ -51,12 +51,12 @@ class HospitalDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'hospital'
 
     def get_queryset(self):
-        return Hospital.objects.select_related('user').prefetch_related('doctors__user', 'reviews__patient')
+        return Hospital.objects.select_related('user').prefetch_related('reviews__patient')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         hospital = self.object
-        context['doctors'] = hospital.doctors.select_related('user').filter(
+        context['doctors'] = hospital.get_doctors().select_related('user').filter(
             user__is_approved=True,
             user__is_active=True
         )

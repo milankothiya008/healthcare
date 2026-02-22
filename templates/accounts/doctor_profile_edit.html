@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Doctor Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-badge"></i> Edit Profile</h2>
+        <a href="{% url 'accounts:doctor_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-3">Profile Photo</h6>
+                    <form method="post" action="{% url 'accounts:doctor_profile_photo' %}" enctype="multipart/form-data" id="photoForm">
+                        {% csrf_token %}
+                        <label class="d-block position-relative cursor-pointer" style="cursor: pointer;">
+                            {% if doctor_profile.profile_picture or user.profile_picture %}
+                            <img id="profileImg" src="{{ doctor_profile.profile_picture.url|default:user.profile_picture.url }}" alt="Profile" class="rounded-circle mb-2 img-thumbnail" style="width: 180px; height: 180px; object-fit: cover;">
+                            {% else %}
+                            <div id="profileImgPlaceholder" class="rounded-circle mb-2 bg-light d-inline-flex align-items-center justify-content-center" style="width: 180px; height: 180px;">
+                                <i class="bi bi-person text-muted" style="font-size: 4rem;"></i>
+                            </div>
+                            {% endif %}
+                            <input type="file" name="profile_picture" accept="image/*" class="form-control mt-2" id="id_profile_photo" required>
+                        </label>
+                        <button type="submit" class="btn btn-sm btn-primary mt-2">Upload Photo</button>
+                    </form>
+                    <p class="small text-muted mt-2 mb-0">Click to choose a new image, then click Upload.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            {% if pending_requests %}
+            <div class="alert alert-info mb-3">
+                <strong><i class="bi bi-hourglass-split"></i> Pending approval</strong>: You have {{ pending_requests|length }} sensitive change(s) waiting for System Admin approval. Until then, patients will see your current approved data.
+                <ul class="mb-0 mt-2">
+                    {% for req in pending_requests %}
+                    <li>{{ req.get_field_name_display }} — requested {{ req.created_at|date }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+                        <h6 class="border-bottom pb-2 mb-3"><i class="bi bi-check-circle text-success"></i> Non-sensitive (saved immediately)</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Phone number</label>
+                                {{ form.phone_number }}
+                                {% if form.phone_number.errors %}<div class="text-danger small">{{ form.phone_number.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Address</label>
+                                {{ form.address }}
+                                {% if form.address.errors %}<div class="text-danger small">{{ form.address.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <h6 class="border-bottom pb-2 mb-3"><i class="bi bi-shield-lock text-warning"></i> Sensitive (requires admin approval)</h6>
+                        <p class="small text-muted mb-3">Changes below will create an update request. Current data stays visible to patients until approved.</p>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Specialization</label>
+                                {{ form.specialization }}
+                                {% if form.specialization.errors %}<div class="text-danger small">{{ form.specialization.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Qualification</label>
+                                {{ form.qualification }}
+                                {% if form.qualification.errors %}<div class="text-danger small">{{ form.qualification.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">License number</label>
+                                {{ form.license_number }}
+                                {% if form.license_number.errors %}<div class="text-danger small">{{ form.license_number.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Verification / education document</label>
+                                {{ form.verification_document }}
+                                {% if form.verification_document.errors %}<div class="text-danger small">{{ form.verification_document.errors }}</div>{% endif %}
+                                <span class="small text-muted">Upload only if you want to change the current document (requires approval).</span>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save changes</button>
+                            <a href="{% url 'accounts:doctor_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if doctor_profile %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-clock"></i> Working hours &amp; availability</h6></div>
+                <div class="card-body">
+                    <p class="mb-2">Start: {{ doctor_profile.available_from }} — End: {{ doctor_profile.available_to }} | Slot: {{ doctor_profile.slot_duration_minutes }} min</p>
+                    <a href="{% url 'doctors:doctor_availability' %}" class="btn btn-sm btn-outline-primary">Edit availability &amp; leave dates</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

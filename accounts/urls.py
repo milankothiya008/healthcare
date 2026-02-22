@@ -19,7 +19,12 @@ urlpatterns = [
     path('admin/doctors/', views.AdminDoctorListView.as_view(), name='admin_doctor_list'),
     path('admin/hospitals/', views.AdminHospitalListView.as_view(), name='admin_hospital_list'),
     path('admin/user/<int:pk>/', views.AdminUserProfileView.as_view(), name='admin_user_profile'),
+    path('admin/doctor-profile-requests/', views.AdminDoctorProfileUpdateRequestListView.as_view(), name='admin_doctor_profile_requests'),
+    path('admin/doctor-profile-request/<int:pk>/approve/', views.admin_approve_doctor_profile_request, name='admin_approve_doctor_profile_request'),
+    path('admin/doctor-profile-request/<int:pk>/reject/', views.admin_reject_doctor_profile_request, name='admin_reject_doctor_profile_request'),
     path('doctor/dashboard/', views.DoctorDashboardView.as_view(), name='doctor_dashboard'),
+    path('doctor/profile/edit/', views.DoctorProfileEditView.as_view(), name='doctor_profile_edit'),
+    path('doctor/profile/photo/', views.DoctorProfilePhotoUploadView.as_view(), name='doctor_profile_photo'),
     path('patient/dashboard/', views.PatientDashboardView.as_view(), name='patient_dashboard'),
     path('hospital/dashboard/', views.HospitalDashboardView.as_view(), name='hospital_dashboard'),
     

@@ -4,30 +4,21 @@
 
 {% block content %}
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2><i class="bi bi-heart-pulse"></i> Doctor Dashboard</h2>
-        {% if doctor_profile %}
-        <span class="badge bg-info">{{ doctor_profile.get_specialization_display }}</span>
-        {% endif %}
+        <div class="d-flex gap-2">
+            {% if doctor_profile %}
+            <span class="badge bg-info">{{ doctor_profile.get_specialization_display }}</span>
+            {% endif %}
+            <a href="{% url 'accounts:doctor_profile_edit' %}" class="btn btn-outline-primary btn-sm">Edit Profile</a>
+            <a href="{% url 'doctors:doctor_hospital_list' %}" class="btn btn-outline-secondary btn-sm">Hospitals &amp; Requests</a>
+            <a href="{% url 'doctors:doctor_appointment_list' %}" class="btn btn-outline-secondary btn-sm">Appointments</a>
+        </div>
     </div>
-    
+
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-4 mb-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-2">Total Appointments</h6>
-                            <h2 class="mb-0">{{ total_appointments }}</h2>
-                        </div>
-                        <i class="bi bi-calendar-check" style="font-size: 3rem; opacity: 0.5;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <div class="card stat-card success">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -35,66 +26,140 @@
                             <h6 class="text-white-50 mb-2">Today's Appointments</h6>
                             <h2 class="mb-0">{{ today_appointments }}</h2>
                         </div>
-                        <i class="bi bi-calendar-day" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <i class="bi bi-calendar-day" style="font-size: 2.5rem; opacity: 0.5;"></i>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Upcoming</h6>
+                            <h2 class="mb-0">{{ upcoming_appointments|length }}</h2>
+                        </div>
+                        <i class="bi bi-calendar-event" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Completed</h6>
+                            <h2 class="mb-0">{{ total_completed_appointments }}</h2>
+                        </div>
+                        <i class="bi bi-calendar-check" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
             <div class="card stat-card warning">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-white-50 mb-2">Pending</h6>
-                            <h2 class="mb-0">{{ pending_appointments }}</h2>
+                            <h6 class="text-white-50 mb-2">Pending Requests</h6>
+                            <h2 class="mb-0">{{ pending_requests }}</h2>
                         </div>
-                        <i class="bi bi-clock-history" style="font-size: 3rem; opacity: 0.5;"></i>
+                        <i class="bi bi-clock-history" style="font-size: 2.5rem; opacity: 0.5;"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Today's Appointments -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-calendar-day"></i> Today's Appointments</h5>
+                    <a href="{% url 'doctors:doctor_appointment_list' %}?filter=today" class="btn btn-sm btn-outline-primary">View all</a>
+                </div>
+                <div class="card-body">
+                    {% if today_appointments_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Time</th>
+                                    <th>Hospital</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for apt in today_appointments_list %}
+                                <tr>
+                                    <td>{{ apt.patient.get_full_name|default:apt.patient.username }}</td>
+                                    <td>{{ apt.appointment_time }}</td>
+                                    <td>{{ apt.hospital.name|default:"—" }}</td>
+                                    <td>{{ apt.reason|truncatewords:8 }}</td>
+                                    <td><span class="badge bg-{% if apt.status == 'CONFIRMED' %}success{% else %}warning{% endif %}">{{ apt.get_status_display }}</span></td>
+                                    <td><a href="{% url 'doctors:doctor_appointment_detail' apt.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No appointments today.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Upcoming Appointments -->
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Upcoming Appointments</h5>
+                    <a href="{% url 'doctors:doctor_appointment_list' %}" class="btn btn-sm btn-outline-primary">Full history</a>
                 </div>
                 <div class="card-body">
                     {% if upcoming_appointments %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th>Reason</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for appointment in upcoming_appointments %}
-                                    <tr>
-                                        <td>{{ appointment.patient.get_full_name|default:appointment.patient.username }}</td>
-                                        <td>{{ appointment.appointment_date }}</td>
-                                        <td>{{ appointment.appointment_time }}</td>
-                                        <td>{{ appointment.reason|truncatewords:10 }}</td>
-                                        <td>
-                                            <span class="badge bg-{% if appointment.status == 'CONFIRMED' %}success{% elif appointment.status == 'PENDING' %}warning{% else %}secondary{% endif %}">
-                                                {{ appointment.get_status_display }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Hospital</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appointment in upcoming_appointments %}
+                                <tr>
+                                    <td>{{ appointment.patient.get_full_name|default:appointment.patient.username }}</td>
+                                    <td>{{ appointment.appointment_date }}</td>
+                                    <td>{{ appointment.appointment_time }}</td>
+                                    <td>{{ appointment.hospital.name|default:"—" }}</td>
+                                    <td>{{ appointment.reason|truncatewords:10 }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if appointment.status == 'CONFIRMED' %}success{% elif appointment.status == 'PENDING' %}warning{% else %}secondary{% endif %}">
+                                            {{ appointment.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td><a href="{% url 'doctors:doctor_appointment_detail' appointment.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% else %}
-                        <p class="text-muted mb-0">No upcoming appointments.</p>
+                    <p class="text-muted mb-0">No upcoming appointments.</p>
                     {% endif %}
                 </div>
             </div>

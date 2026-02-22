@@ -24,8 +24,8 @@
                     <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
                     <p><strong>Experience:</strong> {{ doctor.years_of_experience }} years</p>
                     <p><strong>Consultation Fee:</strong> ${{ doctor.consultation_fee }}</p>
-                    {% if doctor.hospital %}
-                    <p><i class="bi bi-building"></i> {{ doctor.hospital.name }}</p>
+                    {% if doctor_hospitals %}
+                    <p><i class="bi bi-building"></i> {% for h in doctor_hospitals %}{{ h.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
                     {% endif %}
                     {% if doctor.bio %}
                     <p class="small">{{ doctor.bio }}</p>
@@ -37,10 +37,19 @@
             <div class="card mb-4">
                 <div class="card-header"><h5 class="mb-0">Book Appointment</h5></div>
                 <div class="card-body">
-                    {% if user.role == 'PATIENT' and doctor.hospital %}
+                    {% if user.role == 'PATIENT' and doctor_hospitals %}
                     <form method="post" action="{% url 'appointments:book_normal' doctor.pk %}">
                         {% csrf_token %}
-                        <input type="hidden" name="hospital_id" value="{{ doctor.hospital.id }}">
+                        {% if doctor_hospitals|length == 1 %}
+                        <input type="hidden" name="hospital_id" value="{{ doctor_hospitals.0.id }}">
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label">Hospital</label>
+                            <select name="hospital_id" class="form-select" required>
+                                {% for h in doctor_hospitals %}<option value="{{ h.id }}">{{ h.name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Select Date</label>

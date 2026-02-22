@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Hospitals &amp; Work Requests{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-building"></i> Hospitals &amp; Work Requests</h2>
+        <a href="{% url 'accounts:doctor_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <p class="text-muted mb-0">Send a work request to a hospital with your <strong>expected monthly salary</strong>. Hospital Admin can only approve or reject; there is no salary negotiation. If approved, that amount becomes your final salary at that hospital.</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if hospital_list %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Hospital</th>
+                            <th>City</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in hospital_list %}
+                        <tr>
+                            <td>{{ item.hospital.name }}</td>
+                            <td>{{ item.hospital.city|default:"—" }}</td>
+                            <td>
+                                {% if item.is_assigned %}
+                                <span class="badge bg-success">Approved (working here)</span>
+                                {% elif item.request_obj %}
+                                <span class="badge bg-{% if item.request_obj.status == 'PENDING' %}warning{% elif item.request_obj.status == 'REJECTED' %}danger{% else %}success{% endif %}">
+                                    {{ item.request_obj.get_status_display }}{% if item.request_obj.expected_monthly_salary %} — {{ item.request_obj.expected_monthly_salary }}{% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.is_assigned %}
+                                <span class="text-muted">Already associated</span>
+                                {% elif item.request_obj %}
+                                    {% if item.request_obj.status == 'PENDING' %}
+                                    <span class="text-muted">Pending</span>
+                                    {% elif item.request_obj.status == 'REJECTED' %}
+                                    <a href="{% url 'doctors:doctor_send_request' item.hospital.id %}" class="btn btn-sm btn-outline-primary">Send request again</a>
+                                    {% endif %}
+                                {% else %}
+                                <a href="{% url 'doctors:doctor_send_request' item.hospital.id %}" class="btn btn-sm btn-primary">Send work request</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <nav class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-muted mb-0">No hospitals in the system.</p>
+            {% endif %}
+            {% if page_obj %}<p class="small text-muted mt-2">Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</p>{% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

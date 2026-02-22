@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}My Appointments{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2><i class="bi bi-calendar-check"></i> My Appointments</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'doctors:doctor_appointment_list' %}" class="btn btn-outline-{% if not filter %}primary{% else %}secondary{% endif %} btn-sm">All</a>
+            <a href="{% url 'doctors:doctor_appointment_list' %}?filter=today" class="btn btn-outline-{% if filter == 'today' %}primary{% else %}secondary{% endif %} btn-sm">Today</a>
+            <a href="{% url 'doctors:doctor_appointment_list' %}?filter=upcoming" class="btn btn-outline-{% if filter == 'upcoming' %}primary{% else %}secondary{% endif %} btn-sm">Upcoming</a>
+            <a href="{% url 'accounts:doctor_dashboard' %}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if appointments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Hospital</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for apt in appointments %}
+                        <tr>
+                            <td>{{ apt.patient.get_full_name|default:apt.patient.username }}</td>
+                            <td>{{ apt.appointment_date }}</td>
+                            <td>{{ apt.appointment_time }}</td>
+                            <td>{{ apt.hospital.name|default:"—" }}</td>
+                            <td>{{ apt.reason|truncatewords:10 }}</td>
+                            <td>
+                                <span class="badge bg-{% if apt.status == 'CONFIRMED' %}success{% elif apt.status == 'PENDING' %}warning{% elif apt.status == 'COMPLETED' %}info{% else %}secondary{% endif %}">
+                                    {{ apt.get_status_display }}
+                                </span>
+                            </td>
+                            <td><a href="{% url 'doctors:doctor_appointment_detail' apt.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <nav class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?filter={{ filter }}&page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?filter={{ filter }}&page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-muted mb-0">No appointments found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

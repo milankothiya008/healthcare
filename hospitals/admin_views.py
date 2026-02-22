@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.core.paginator import Paginator
 
 from accounts.mixins import HospitalRequiredMixin
-from .models import Hospital, DoctorHospitalRequest, Admission
+from .models import Hospital, DoctorHospitalRequest, DoctorHospitalAssignment, Admission
 from doctors.models import DoctorProfile
 from appointments.models import Appointment
 
@@ -36,7 +36,7 @@ class HospitalAdminDashboardView(HospitalRequiredMixin, TemplateView):
 
         today = timezone.now().date()
         context['hospital'] = hospital
-        context['total_doctors'] = hospital.doctors.count()
+        context['total_doctors'] = hospital.get_doctors().count()
         context['total_appointments'] = Appointment.objects.filter(hospital=hospital).count()
         context['today_appointments'] = Appointment.objects.filter(
             hospital=hospital,
@@ -112,7 +112,7 @@ class DoctorRequestDetailView(HospitalRequiredMixin, DetailView):
 
 
 def approve_doctor_request(request, pk):
-    """Approve doctor join request"""
+    """Approve doctor join request; create assignment with expected salary as final salary"""
     hospital = get_hospital(request)
     if not hospital:
         messages.error(request, 'Permission denied.')
@@ -120,10 +120,18 @@ def approve_doctor_request(request, pk):
 
     req = get_object_or_404(DoctorHospitalRequest, pk=pk, hospital=hospital, status='PENDING')
     if request.method == 'POST':
-        req.doctor.hospital = hospital
-        req.doctor.save()
-        req.status = 'APPROVED'
-        req.save()
+        with transaction.atomic():
+            salary = req.expected_monthly_salary or 0
+            DoctorHospitalAssignment.objects.get_or_create(
+                doctor=req.doctor,
+                hospital=hospital,
+                defaults={'monthly_salary': salary, 'is_active': True}
+            )
+            if not req.doctor.hospital_id:
+                req.doctor.hospital = hospital
+                req.doctor.save(update_fields=['hospital'])
+            req.status = 'APPROVED'
+            req.save()
         messages.success(request, f'Dr. {req.doctor.user.get_full_name() or req.doctor.user.username} has been approved.')
     return redirect('hospitals:admin_doctor_requests')
 
@@ -144,7 +152,7 @@ def reject_doctor_request(request, pk):
 
 
 class HospitalDoctorListView(HospitalRequiredMixin, ListView):
-    """List doctors associated with hospital"""
+    """List doctors associated with hospital (assignments + legacy)"""
     template_name = 'hospitals/admin/doctor_list.html'
     context_object_name = 'doctors'
     paginate_by = 15
@@ -153,7 +161,7 @@ class HospitalDoctorListView(HospitalRequiredMixin, ListView):
         hospital = get_hospital(self.request)
         if not hospital:
             return DoctorProfile.objects.none()
-        return DoctorProfile.objects.filter(hospital=hospital).select_related('user').order_by('user__first_name')
+        return hospital.get_doctors().select_related('user').order_by('user__first_name')
 
 
 class HospitalDoctorDetailView(HospitalRequiredMixin, DetailView):
@@ -166,19 +174,22 @@ class HospitalDoctorDetailView(HospitalRequiredMixin, DetailView):
         hospital = get_hospital(self.request)
         if not hospital:
             return DoctorProfile.objects.none()
-        return DoctorProfile.objects.filter(hospital=hospital).select_related('user')
+        return hospital.get_doctors().select_related('user')
 
 
 def remove_doctor(request, pk):
-    """Remove doctor from hospital - only if no pending/upcoming appointments"""
+    """Remove doctor from hospital - deactivate assignment or clear legacy FK; only if no pending/upcoming appointments"""
     hospital = get_hospital(request)
     if not hospital:
         messages.error(request, 'Permission denied.')
         return redirect('accounts:login')
 
-    doctor = get_object_or_404(DoctorProfile, pk=pk, hospital=hospital)
-    today = timezone.now().date()
+    doctor = get_object_or_404(DoctorProfile, pk=pk)
+    if doctor not in hospital.get_doctors():
+        messages.error(request, 'Doctor is not associated with this hospital.')
+        return redirect('hospitals:admin_doctor_list')
 
+    today = timezone.now().date()
     pending = Appointment.objects.filter(
         doctor=doctor.user,
         hospital=hospital,
@@ -191,8 +202,14 @@ def remove_doctor(request, pk):
         return redirect('hospitals:admin_doctor_detail', pk=pk)
 
     if request.method == 'POST':
-        doctor.hospital = None
-        doctor.save()
+        with transaction.atomic():
+            assignment = DoctorHospitalAssignment.objects.filter(doctor=doctor, hospital=hospital, is_active=True).first()
+            if assignment:
+                assignment.is_active = False
+                assignment.save()
+            if doctor.hospital_id == hospital.id:
+                doctor.hospital = None
+                doctor.save(update_fields=['hospital'])
         messages.success(request, 'Doctor removed from hospital.')
         return redirect('hospitals:admin_doctor_list')
     return redirect('hospitals:admin_doctor_detail', pk=pk)

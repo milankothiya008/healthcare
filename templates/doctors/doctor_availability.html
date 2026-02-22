@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Availability &amp; Leave{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-calendar-range"></i> Availability &amp; Leave</h2>
+        <a href="{% url 'accounts:doctor_profile_edit' %}" class="btn btn-outline-secondary">Back to Profile</a>
+    </div>
+
+    {% if not doctor_profile %}
+    <div class="alert alert-warning">Doctor profile not found.</div>
+    {% else %}
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5 class="mb-0">Working hours &amp; slot duration</h5></div>
+                <div class="card-body">
+                    <p class="small text-muted">Slots are generated automatically within this range. Booked slots are excluded globally (across all hospitals).</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="save_hours">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Start time</label>
+                                <input type="time" name="available_from" class="form-control" value="{{ available_from_str|default:'09:00' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">End time</label>
+                                <input type="time" name="available_to" class="form-control" value="{{ available_to_str|default:'17:00' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Slot duration (minutes)</label>
+                                <input type="number" name="slot_duration_minutes" class="form-control" value="{{ doctor_profile.slot_duration_minutes }}" min="5" step="5" required>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Save hours</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header"><h5 class="mb-0">Block dates (leave)</h5></div>
+                <div class="card-body">
+                    <p class="small text-muted">On these dates no appointments can be booked.</p>
+                    <form method="post" class="mb-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_leave">
+                        <div class="input-group">
+                            <input type="date" name="leave_date" class="form-control" required>
+                            <button type="submit" class="btn btn-primary">Add leave date</button>
+                        </div>
+                    </form>
+                    {% if leave_dates %}
+                    <ul class="list-group list-group-flush">
+                        {% for d in leave_dates %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ d }}
+                            <form method="post" class="d-inline" onsubmit="return confirm('Remove this leave date?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove_leave">
+                                <input type="hidden" name="leave_date" value="{{ d|date:'Y-m-d' }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted small mb-0">No leave dates set.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

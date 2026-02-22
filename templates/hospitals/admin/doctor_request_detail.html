@@ -50,6 +50,10 @@
                             <p class="mb-0">{{ request_obj.doctor.license_number }}</p>
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Expected monthly salary</label>
+                            <p class="mb-0">{% if request_obj.expected_monthly_salary is not None %}{{ request_obj.expected_monthly_salary }}{% else %}—{% endif %}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label class="text-muted small">Consultation Fee</label>
                             <p class="mb-0">${{ request_obj.doctor.consultation_fee }}</p>
                         </div>

@@ -40,8 +40,20 @@ class Hospital(models.Model):
     
     @property
     def total_doctors(self):
-        """Get total number of doctors in this hospital"""
-        return self.doctors.count()
+        """Get total number of doctors (from assignments + legacy single hospital)"""
+        from doctors.models import DoctorProfile
+        return DoctorProfile.objects.filter(
+            models.Q(hospital_assignments__hospital=self, hospital_assignments__is_active=True) |
+            models.Q(hospital=self)
+        ).distinct().count()
+
+    def get_doctors(self):
+        """Queryset of doctors at this hospital (assignments or legacy hospital FK)"""
+        from doctors.models import DoctorProfile
+        return DoctorProfile.objects.filter(
+            models.Q(hospital_assignments__hospital=self, hospital_assignments__is_active=True) |
+            models.Q(hospital=self)
+        ).distinct()
 
     @property
     def occupied_beds_count(self):
@@ -98,7 +110,7 @@ class HospitalReview(models.Model):
 
 
 class DoctorHospitalRequest(models.Model):
-    """Doctor join request - two-level approval: System Admin approves doctor, then doctor requests hospital"""
+    """Doctor work request to hospital - with expected monthly salary; no negotiation"""
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
         ('APPROVED', 'Approved'),
@@ -114,6 +126,7 @@ class DoctorHospitalRequest(models.Model):
         on_delete=models.CASCADE,
         related_name='doctor_requests'
     )
+    expected_monthly_salary = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Expected salary when sending request")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -126,6 +139,32 @@ class DoctorHospitalRequest(models.Model):
 
     def __str__(self):
         return f"{self.doctor} -> {self.hospital} ({self.status})"
+
+
+class DoctorHospitalAssignment(models.Model):
+    """Doctor assigned to hospital (multi-hospital); salary fixed at approval"""
+    doctor = models.ForeignKey(
+        'doctors.DoctorProfile',
+        on_delete=models.CASCADE,
+        related_name='hospital_assignments'
+    )
+    hospital = models.ForeignKey(
+        Hospital,
+        on_delete=models.CASCADE,
+        related_name='doctor_assignments'
+    )
+    monthly_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    is_active = models.BooleanField(default=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'doctor_hospital_assignments'
+        verbose_name = 'Doctor Hospital Assignment'
+        verbose_name_plural = 'Doctor Hospital Assignments'
+        unique_together = ('doctor', 'hospital')
+
+    def __str__(self):
+        return f"{self.doctor} at {self.hospital}"
 
 
 class Admission(models.Model):
