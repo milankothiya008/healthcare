@@ -15,8 +15,8 @@
         <div class="col-md-4 mb-4">
             <div class="card">
                 <div class="card-body text-center">
-                    {% if hospital.logo %}
-                    <img src="{{ hospital.logo.url }}" alt="{{ hospital.name }}" class="rounded mb-3" style="width: 200px; height: 200px; object-fit: cover;">
+                    {% if hospital_logo_url %}
+                    <img src="{{ hospital_logo_url }}" alt="{{ hospital.name }}" class="rounded mb-3" style="width: 200px; height: 200px; object-fit: cover;">
                     {% else %}
                     <div class="rounded bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 200px; height: 200px;">
                         <i class="bi bi-building text-white" style="font-size: 5rem;"></i>
@@ -33,10 +33,21 @@
         </div>
         <div class="col-md-8">
             <div class="card mb-4">
-                <div class="card-header"><h5 class="mb-0">About</h5></div>
+                <div class="card-header"><h5 class="mb-0">About {{ hospital.name }}</h5></div>
                 <div class="card-body">
-                    <p>{{ hospital.description|default:"No description available." }}</p>
-                    <p><strong>Departments:</strong> {{ hospital.facilities|default:"—" }}</p>
+                    <p class="mb-3">{{ hospital.description|default:"No description available." }}</p>
+                    <p class="mb-2"><strong>Departments:</strong> {{ hospital.facilities|default:"—" }}</p>
+                    <hr class="my-3">
+                    <p class="mb-1"><strong><i class="bi bi-telephone"></i> Hospital contact:</strong> {{ hospital.phone|default:"—" }}</p>
+                    {% if hospital.website %}
+                    <p class="mb-1"><strong><i class="bi bi-globe"></i> Website:</strong> <a href="{{ hospital.website }}" target="_blank" rel="noopener">{{ hospital.website }}</a></p>
+                    {% else %}
+                    <p class="mb-1"><strong><i class="bi bi-globe"></i> Website:</strong> —</p>
+                    {% endif %}
+                    {% if hospital.email %}<p class="mb-0"><strong><i class="bi bi-envelope"></i> Email:</strong> {{ hospital.email }}</p>{% endif %}
+                    {% if hospital.user.phone_number %}
+                    <p class="mb-0 mt-2 text-muted small"><strong>Admin contact:</strong> {{ hospital.user.phone_number }}</p>
+                    {% endif %}
                 </div>
             </div>
 
@@ -45,21 +56,20 @@
                 <div class="card-body">
                     {% if doctors %}
                     <div class="row">
-                        {% for doc in doctors %}
+                        {% for item in doctors %}
                         <div class="col-md-6 mb-3">
-                            <div class="card">
+                            <div class="card h-100">
                                 <div class="card-body d-flex">
-                                    {% if doc.profile_picture %}
-                                    <img src="{{ doc.profile_picture.url }}" alt="" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
-                                    {% elif doc.user.profile_picture %}
-                                    <img src="{{ doc.user.profile_picture.url }}" alt="" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                    {% if item.profile_image_url %}
+                                    <img src="{{ item.profile_image_url }}" alt="" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
                                     {% else %}
                                     <i class="bi bi-person-circle me-3" style="font-size: 3rem; color: #6c757d;"></i>
                                     {% endif %}
                                     <div class="flex-grow-1">
-                                        <h6 class="mb-1">{{ doc.user.get_full_name|default:doc.user.username }}</h6>
-                                        <p class="small text-muted mb-1">{{ doc.get_specialization_display }} • {{ doc.years_of_experience }} yrs exp</p>
-                                        <a href="{% url 'doctors:doctor_detail' doc.pk %}" class="btn btn-sm btn-primary">Book Appointment</a>
+                                        <h6 class="mb-1">{{ item.doctor.user.get_full_name|default:item.doctor.user.username }}</h6>
+                                        <p class="small text-muted mb-1">{{ item.doctor.get_specialization_display }} • {{ item.doctor.years_of_experience }} yrs exp</p>
+                                        {% if item.doctor.user.phone_number %}<p class="small mb-1"><i class="bi bi-telephone"></i> {{ item.doctor.user.phone_number }}</p>{% endif %}
+                                        <a href="{% url 'doctors:doctor_detail' item.doctor.pk %}" class="btn btn-sm btn-primary">Book Appointment</a>
                                     </div>
                                 </div>
                             </div>

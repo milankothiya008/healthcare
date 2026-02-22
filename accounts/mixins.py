@@ -50,8 +50,15 @@ class DoctorRequiredMixin(RoleRequiredMixin):
 
 
 class PatientRequiredMixin(RoleRequiredMixin):
-    """Mixin to require Patient role"""
+    """Mixin to require Patient role - explicit check so e.g. Doctor cannot access patient-only pages"""
     allowed_roles = ['PATIENT']
+
+    def dispatch(self, request, *args, **kwargs):
+        result = super().dispatch(request, *args, **kwargs)
+        if request.user.is_authenticated and getattr(request.user, 'role', None) != 'PATIENT':
+            messages.error(request, "You don't have permission to access this page.")
+            return redirect('accounts:dashboard_redirect')
+        return result
 
 
 class HospitalRequiredMixin(RoleRequiredMixin):

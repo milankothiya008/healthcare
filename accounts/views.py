@@ -249,6 +249,18 @@ class DoctorProfileEditView(DoctorRequiredMixin, TemplateView):
         context['pending_requests'] = list(
             DoctorProfileUpdateRequest.objects.filter(doctor=doctor_profile, status='PENDING').order_by('-created_at')
         ) if doctor_profile else []
+        # Safe profile picture URL (avoid ValueError when no file is associated)
+        context['profile_picture_url'] = None
+        for obj in (doctor_profile, self.request.user):
+            if not obj:
+                continue
+            pic = getattr(obj, 'profile_picture', None)
+            if pic:
+                try:
+                    context['profile_picture_url'] = pic.url
+                    break
+                except (ValueError, AttributeError):
+                    pass
         return context
 
     def post(self, request, *args, **kwargs):

@@ -47,26 +47,43 @@
                             <td>{{ apt.appointment_time|time:"H:i" }}</td>
                             <td>{{ apt.reason|truncatewords:5 }}</td>
                             <td>
-                                <span class="badge bg-{% if apt.status == 'CONFIRMED' %}success{% elif apt.status == 'PENDING' %}warning{% elif apt.status == 'COMPLETED' %}info{% elif apt.status == 'CANCELLED' %}secondary{% else %}primary{% endif %}">
+                                <span class="badge {% if apt.status == 'PENDING' %}bg-warning text-dark{% elif apt.status == 'CONFIRMED' %}bg-primary{% elif apt.status == 'COMPLETED' %}bg-success{% elif apt.status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
                                     {{ apt.get_status_display }}
                                 </span>
                                 {% if apt.is_emergency %}<span class="badge bg-danger">Emergency</span>{% endif %}
                             </td>
                             <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Update Status</button>
-                                    <ul class="dropdown-menu">
-                                        {% for val, label in status_choices %}
-                                        <li>
-                                            <form method="post" action="{% url 'hospitals:admin_update_appointment_status' apt.pk %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="status" value="{{ val }}">
-                                                <button type="submit" class="dropdown-item {% if apt.status == val %}active{% endif %}">{{ label }}</button>
-                                            </form>
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
+                                {% if apt.status == 'COMPLETED' or apt.status == 'CANCELLED' %}
+                                <span class="text-muted small">Read-only</span>
+                                {% elif apt.status == 'PENDING' %}
+                                <div class="btn-group btn-group-sm">
+                                    <form method="post" action="{% url 'hospitals:admin_update_appointment_status' apt.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="CONFIRMED">
+                                        <button type="submit" class="btn btn-primary">Confirm</button>
+                                    </form>
+                                    <form method="post" action="{% url 'hospitals:admin_update_appointment_status' apt.pk %}" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="CANCELLED">
+                                        <button type="submit" class="btn btn-outline-danger">Cancel</button>
+                                    </form>
                                 </div>
+                                {% elif apt.status == 'CONFIRMED' %}
+                                <div class="btn-group btn-group-sm">
+                                    <form method="post" action="{% url 'hospitals:admin_update_appointment_status' apt.pk %}" class="d-inline" onsubmit="return confirm('Mark as completed?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="COMPLETED">
+                                        <button type="submit" class="btn btn-success">Complete</button>
+                                    </form>
+                                    <form method="post" action="{% url 'hospitals:admin_update_appointment_status' apt.pk %}" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="CANCELLED">
+                                        <button type="submit" class="btn btn-outline-danger">Cancel</button>
+                                    </form>
+                                </div>
+                                {% else %}
+                                <span class="text-muted small">—</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}

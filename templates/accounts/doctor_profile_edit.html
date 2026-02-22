@@ -17,14 +17,14 @@
                     <form method="post" action="{% url 'accounts:doctor_profile_photo' %}" enctype="multipart/form-data" id="photoForm">
                         {% csrf_token %}
                         <label class="d-block position-relative cursor-pointer" style="cursor: pointer;">
-                            {% if doctor_profile.profile_picture or user.profile_picture %}
-                            <img id="profileImg" src="{{ doctor_profile.profile_picture.url|default:user.profile_picture.url }}" alt="Profile" class="rounded-circle mb-2 img-thumbnail" style="width: 180px; height: 180px; object-fit: cover;">
+                            {% if profile_picture_url %}
+                            <img id="profileImg" src="{{ profile_picture_url }}" alt="Profile" class="rounded-circle mb-2 img-thumbnail" style="width: 180px; height: 180px; object-fit: cover;">
                             {% else %}
                             <div id="profileImgPlaceholder" class="rounded-circle mb-2 bg-light d-inline-flex align-items-center justify-content-center" style="width: 180px; height: 180px;">
                                 <i class="bi bi-person text-muted" style="font-size: 4rem;"></i>
                             </div>
                             {% endif %}
-                            <input type="file" name="profile_picture" accept="image/*" class="form-control mt-2" id="id_profile_photo" required>
+                            <input type="file" name="profile_picture" accept="image/*" class="form-control mt-2" id="id_profile_photo">
                         </label>
                         <button type="submit" class="btn btn-sm btn-primary mt-2">Upload Photo</button>
                     </form>

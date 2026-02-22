@@ -57,10 +57,14 @@ class Hospital(models.Model):
 
     @property
     def occupied_beds_count(self):
-        """Count of beds occupied by active admissions (discharge_time null or future)"""
+        """Count of beds occupied by active admissions: already started and not yet discharged.
+        Discharge automatically frees the bed (discharge_time set)."""
         from django.db.models import Q
+        now = timezone.now()
         return self.admissions.filter(
-            Q(discharge_time__isnull=True) | Q(discharge_time__gt=timezone.now())
+            admission_time__lte=now
+        ).filter(
+            Q(discharge_time__isnull=True) | Q(discharge_time__gt=now)
         ).count()
 
     @property

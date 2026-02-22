@@ -86,6 +86,16 @@ class DoctorDetailView(LoginRequiredMixin, DetailView):
                 doctor_hospitals.append(a.hospital)
         context['doctor_hospitals'] = doctor_hospitals
 
+        # Safe profile picture URL for template
+        context['doctor_profile_picture_url'] = None
+        for obj in (doctor, doctor.user):
+            if getattr(obj, 'profile_picture', None):
+                try:
+                    context['doctor_profile_picture_url'] = obj.profile_picture.url
+                    break
+                except (ValueError, AttributeError):
+                    pass
+
         # Generate next 14 days as available dates (exclude leave)
         available_dates = []
         for i in range(14):

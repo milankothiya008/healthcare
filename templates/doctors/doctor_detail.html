@@ -12,10 +12,8 @@
         <div class="col-md-4 mb-4">
             <div class="card">
                 <div class="card-body text-center">
-                    {% if doctor.profile_picture %}
-                    <img src="{{ doctor.profile_picture.url }}" alt="" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                    {% elif doctor.user.profile_picture %}
-                    <img src="{{ doctor.user.profile_picture.url }}" alt="" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% if doctor_profile_picture_url %}
+                    <img src="{{ doctor_profile_picture_url }}" alt="" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
                     {% else %}
                     <i class="bi bi-person-circle text-muted" style="font-size: 8rem;"></i>
                     {% endif %}
@@ -24,6 +22,7 @@
                     <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
                     <p><strong>Experience:</strong> {{ doctor.years_of_experience }} years</p>
                     <p><strong>Consultation Fee:</strong> ${{ doctor.consultation_fee }}</p>
+                    {% if doctor.user.phone_number %}<p><strong><i class="bi bi-telephone"></i> Contact:</strong> {{ doctor.user.phone_number }}</p>{% endif %}
                     {% if doctor_hospitals %}
                     <p><i class="bi bi-building"></i> {% for h in doctor_hospitals %}{{ h.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
                     {% endif %}

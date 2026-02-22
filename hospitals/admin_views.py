@@ -57,7 +57,7 @@ class HospitalAdminDashboardView(HospitalRequiredMixin, TemplateView):
 
 
 class HospitalProfileEditView(HospitalRequiredMixin, UpdateView):
-    """Edit hospital profile - available_beds not editable"""
+    """Edit hospital profile - includes departments (facilities), contact, website, and admin contact"""
     model = Hospital
     template_name = 'hospitals/admin/profile_edit.html'
     fields = ['name', 'description', 'facilities', 'address', 'city', 'state', 'zip_code', 'phone', 'email', 'website', 'total_beds', 'logo']
@@ -66,6 +66,9 @@ class HospitalProfileEditView(HospitalRequiredMixin, UpdateView):
         form = super().get_form(form_class)
         for field in form.fields:
             form.fields[field].widget.attrs.setdefault('class', 'form-control')
+        if 'facilities' in form.fields:
+            form.fields['facilities'].label = 'Departments (comma-separated)'
+            form.fields['facilities'].help_text = 'e.g. Emergency, Cardiology, General Medicine'
         return form
 
     def get_object(self, queryset=None):
@@ -80,6 +83,15 @@ class HospitalProfileEditView(HospitalRequiredMixin, UpdateView):
             messages.error(request, 'Hospital profile not found.')
             return redirect('accounts:dashboard_redirect')
         return super().get(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        result = super().form_valid(form)
+        # Save admin contact number to user (shown to patients as "Admin contact")
+        admin_phone = self.request.POST.get('admin_phone', '').strip()
+        if self.request.user.phone_number != admin_phone:
+            self.request.user.phone_number = admin_phone
+            self.request.user.save(update_fields=['phone_number', 'updated_at'])
+        return result
 
 
 class DoctorRequestListView(HospitalRequiredMixin, ListView):
@@ -240,11 +252,22 @@ class HospitalAppointmentListView(HospitalRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['filter_status'] = self.request.GET.get('status', '')
         context['status_choices'] = Appointment.STATUS_CHOICES
+        context['status_transitions'] = APPOINTMENT_STATUS_TRANSITIONS
         return context
 
 
+# Allowed status transitions: from_status -> [to_statuses]
+APPOINTMENT_STATUS_TRANSITIONS = {
+    'PENDING': ['CONFIRMED', 'CANCELLED'],
+    'CONFIRMED': ['COMPLETED', 'CANCELLED'],
+    'COMPLETED': [],   # read-only
+    'CANCELLED': [],   # read-only
+    'RESCHEDULED': ['CONFIRMED', 'CANCELLED'],
+}
+
+
 def update_appointment_status(request, pk):
-    """Update appointment status"""
+    """Update appointment status - only valid transitions allowed. Completed/Cancelled are read-only."""
     hospital = get_hospital(request)
     if not hospital:
         messages.error(request, 'Permission denied.')
@@ -252,13 +275,14 @@ def update_appointment_status(request, pk):
 
     apt = get_object_or_404(Appointment, pk=pk, hospital=hospital)
     if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status in dict(Appointment.STATUS_CHOICES):
+        new_status = request.POST.get('status', '').strip()
+        allowed = APPOINTMENT_STATUS_TRANSITIONS.get(apt.status, [])
+        if new_status in dict(Appointment.STATUS_CHOICES) and new_status in allowed:
             apt.status = new_status
-            apt.save()
-            messages.success(request, 'Appointment status updated.')
+            apt.save(update_fields=['status', 'updated_at'])
+            messages.success(request, f'Appointment status updated to {dict(Appointment.STATUS_CHOICES).get(new_status, new_status)}.')
         else:
-            messages.error(request, 'Invalid status.')
+            messages.error(request, 'Invalid status transition or status is read-only.')
     return redirect('hospitals:admin_appointments')
 
 

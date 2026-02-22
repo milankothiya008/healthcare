@@ -56,10 +56,23 @@ class HospitalDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         hospital = self.object
-        context['doctors'] = hospital.get_doctors().select_related('user').filter(
+        doctors_qs = hospital.get_doctors().select_related('user').filter(
             user__is_approved=True,
             user__is_active=True
         )
+        # Safe profile image URL per doctor (avoid ValueError when no file)
+        doctors_with_extra = []
+        for doc in doctors_qs:
+            url = None
+            for obj in (doc, doc.user):
+                if getattr(obj, 'profile_picture', None):
+                    try:
+                        url = obj.profile_picture.url
+                        break
+                    except (ValueError, AttributeError):
+                        pass
+            doctors_with_extra.append({'doctor': doc, 'profile_image_url': url})
+        context['doctors'] = doctors_with_extra
         context['reviews'] = hospital.reviews.select_related('patient').order_by('-created_at')[:20]
 
         # Can patient review? Only if they have completed appointment at this hospital
@@ -83,6 +96,13 @@ class HospitalDetailView(LoginRequiredMixin, DetailView):
                 req = hospital.doctor_requests.filter(doctor=doc_profile).first()
                 can_request_join = req is None or req.status == 'REJECTED'
         context['can_request_join'] = can_request_join
+        # Safe logo URL (avoid ValueError when no file)
+        context['hospital_logo_url'] = None
+        if getattr(hospital, 'logo', None):
+            try:
+                context['hospital_logo_url'] = hospital.logo.url
+            except (ValueError, AttributeError):
+                pass
         return context
 
 

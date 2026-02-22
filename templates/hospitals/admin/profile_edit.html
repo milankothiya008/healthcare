@@ -32,9 +32,23 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-building"></i> Departments</h6>
+                                <p class="small text-muted mb-2">Add department names separated by commas. These will be shown to patients on your hospital page (e.g. Emergency, Cardiology, General Medicine, Pediatrics).</p>
+                                {% if form.facilities %}<label class="form-label">Departments</label>{{ form.facilities }}{% if form.facilities.help_text %}<p class="form-text small">{{ form.facilities.help_text }}</p>{% endif %}{% if form.facilities.errors %}<div class="text-danger small">{{ form.facilities.errors }}</div>{% endif %}{% endif %}
+                            </div>
+                        </div>
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-telephone"></i> Admin contact (optional)</h6>
+                                <p class="small text-muted mb-2">Your contact number, shown to patients as "Admin contact" on the hospital page.</p>
+                                <input type="text" name="admin_phone" class="form-control" value="{{ request.user.phone_number|default:'' }}" placeholder="e.g. +1 234 567 8900" maxlength="15">
+                            </div>
+                        </div>
                         <div class="row g-3">
                             {% for field in form %}
-                            {% if field.name != 'total_beds' %}
+                            {% if field.name not in 'total_beds,facilities' %}
                             <div class="col-12 {% if field.name in 'city,state,zip_code,phone,email,website' %}col-md-6{% endif %}">
                                 <label class="form-label">{{ field.label }}</label>
                                 {{ field }}

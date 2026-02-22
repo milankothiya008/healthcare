@@ -95,6 +95,12 @@ def book_normal_appointment(request, doctor_id):
         except (ValueError, TypeError):
             errors.append('Invalid time.')
 
+        # If booking for today, time must be in the future
+        if not errors and appointment_date == today:
+            now_time = timezone.now().time()
+            if appointment_time <= now_time:
+                errors.append('Cannot book a time that has already passed. Please choose a later time today.')
+
         hospital = None
         if hospital_id:
             try:
