@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Hospital Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-building"></i> Edit Hospital Profile</h2>
+        <a href="{% url 'hospitals:admin_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-bed"></i> Bed capacity</h6>
+                                <p class="small text-muted mb-3">Set how many beds your hospital has. Occupied and available beds are updated automatically when you admit or discharge patients.</p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Total number of beds</label>
+                                        <input type="number" name="total_beds" class="form-control" value="{{ object.total_beds }}" min="0" required>
+                                        {% if form.total_beds.errors %}<div class="text-danger small">{{ form.total_beds.errors }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <p class="small text-muted mb-0">Currently occupied: <strong>{{ object.occupied_beds_count }}</strong> &nbsp;|&nbsp; Available: <strong>{{ object.available_beds_count }}</strong></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            {% for field in form %}
+                            {% if field.name != 'total_beds' %}
+                            <div class="col-12 {% if field.name in 'city,state,zip_code,phone,email,website' %}col-md-6{% endif %}">
+                                <label class="form-label">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            <div class="col-12">
+                                <p class="text-muted small mb-0"><i class="bi bi-info-circle"></i> Available = Total beds − Occupied (from current admissions). Discharging a patient frees a bed automatically.</p>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Current Logo</h6>
+                    {% if object.logo %}
+                    <img src="{{ object.logo.url }}" alt="Hospital" class="img-fluid rounded mb-2" style="max-height: 200px;">
+                    {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center mb-2" style="height: 150px;">
+                        <i class="bi bi-building text-muted" style="font-size: 4rem;"></i>
+                    </div>
+                    {% endif %}
+                    <p class="small text-muted mb-0">Available: {{ object.available_beds_count }} / {{ object.total_beds }} beds</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

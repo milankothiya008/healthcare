@@ -46,7 +46,7 @@
                         <div class="flex-grow-1">
                             <h5 class="mb-1">{{ hospital.name }}</h5>
                             <p class="small text-muted mb-0">{{ hospital.city|default:"" }} {{ hospital.address|truncatewords:5 }}</p>
-                            <span class="badge bg-success">{{ hospital.available_beds }} beds available</span>
+                            <span class="badge bg-success">{{ hospital.available_beds_count }} beds available</span>
                         </div>
                     </div>
                     <form method="post" action="{% url 'appointments:confirm_emergency' %}" onsubmit="return confirm('Confirm emergency booking at {{ hospital.name }}? One bed will be reserved.');">

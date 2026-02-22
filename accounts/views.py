@@ -160,8 +160,8 @@ def dashboard_redirect(request):
         return redirect('accounts:doctor_dashboard')
     elif role == 'PATIENT':
         return redirect('accounts:patient_dashboard')
-    elif role == 'HOSPITAL':
-        return redirect('accounts:hospital_dashboard')
+    elif role in ('HOSPITAL', 'HOSPITAL_ADMIN'):
+        return redirect('hospitals:admin_dashboard')
     else:
         messages.error(request, 'Invalid user role.')
         return redirect('accounts:login')

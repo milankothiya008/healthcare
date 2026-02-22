@@ -13,6 +13,7 @@ class User(AbstractUser):
         ('DOCTOR', 'Doctor'),
         ('PATIENT', 'Patient'),
         ('HOSPITAL', 'Hospital'),
+        ('HOSPITAL_ADMIN', 'Hospital Admin'),
     ]
     
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='PATIENT')
@@ -42,6 +43,9 @@ class User(AbstractUser):
     
     def is_hospital(self):
         return self.role == 'HOSPITAL'
+
+    def is_hospital_admin(self):
+        return self.role in ('HOSPITAL', 'HOSPITAL_ADMIN')
     
     def can_access_dashboard(self):
         """Check if user can access their dashboard"""

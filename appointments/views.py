@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Q
 
 from .models import Appointment
 from doctors.models import DoctorProfile
@@ -132,17 +133,18 @@ def emergency_hospital_list(request):
         messages.error(request, 'Permission denied.')
         return redirect('accounts:login')
 
-    hospitals = Hospital.objects.filter(available_beds__gt=0).select_related('user').order_by('name')
-
     # Optional search
     q = request.GET.get('q', '').strip()
     city = request.GET.get('city', '').strip()
+    hospitals_qs = Hospital.objects.select_related('user').order_by('name')
     if q:
-        hospitals = hospitals.filter(
+        hospitals_qs = hospitals_qs.filter(
             Q(name__icontains=q) | Q(address__icontains=q) | Q(city__icontains=q)
         )
     if city:
-        hospitals = hospitals.filter(city__icontains=city)
+        hospitals_qs = hospitals_qs.filter(city__icontains=city)
+    # Filter to only hospitals with available beds (computed dynamically)
+    hospitals = [h for h in hospitals_qs if h.available_beds_count > 0]
 
     from django.core.paginator import Paginator
     paginator = Paginator(hospitals, 10)
@@ -157,7 +159,7 @@ def emergency_hospital_list(request):
 
 
 def confirm_emergency_booking(request):
-    """Confirm emergency booking - decrease available beds"""
+    """Confirm emergency booking - create Admission for bed occupancy"""
     if not request.user.is_authenticated or request.user.role != 'PATIENT':
         messages.error(request, 'Permission denied.')
         return redirect('accounts:login')
@@ -169,7 +171,7 @@ def confirm_emergency_booking(request):
     reason = request.POST.get('reason', 'Emergency').strip() or 'Emergency'
 
     hospital = get_object_or_404(Hospital, pk=hospital_id)
-    if hospital.available_beds <= 0:
+    if hospital.available_beds_count <= 0:
         messages.error(request, 'No beds available at this hospital.')
         return redirect('appointments:emergency_booking')
 
@@ -180,17 +182,25 @@ def confirm_emergency_booking(request):
         return redirect('appointments:emergency_booking')
 
     with transaction.atomic():
-        hospital.available_beds -= 1
-        hospital.save()
-        Appointment.objects.create(
+        from hospitals.models import Admission
+        now = timezone.now()
+        apt = Appointment.objects.create(
             patient=request.user,
             doctor=doctor_profile.user,
             hospital=hospital,
-            appointment_date=timezone.now().date(),
-            appointment_time=timezone.now().time(),
+            appointment_date=now.date(),
+            appointment_time=now.time(),
             reason=reason,
             is_emergency=True,
             status='PENDING'
+        )
+        Admission.objects.create(
+            patient=request.user,
+            hospital=hospital,
+            doctor=doctor_profile.user,
+            appointment=apt,
+            admission_time=now,
+            notes=reason
         )
 
     messages.success(request, 'Emergency appointment booked successfully!')
@@ -212,8 +222,11 @@ def cancel_appointment(request, pk):
     if request.method == 'POST':
         with transaction.atomic():
             if appointment.is_emergency and appointment.hospital:
-                appointment.hospital.available_beds += 1
-                appointment.hospital.save()
+                from hospitals.models import Admission
+                admission = Admission.objects.filter(appointment=appointment).first()
+                if admission and admission.discharge_time is None:
+                    admission.discharge_time = timezone.now()
+                    admission.save()
             appointment.status = 'CANCELLED'
             appointment.save()
         messages.success(request, 'Appointment cancelled successfully.')

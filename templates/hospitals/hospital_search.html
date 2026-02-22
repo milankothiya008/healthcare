@@ -57,7 +57,7 @@
                         <strong>Departments:</strong> {{ hospital.facilities|truncatewords:10|default:"—" }}
                     </p>
                     <p class="small mb-2">
-                        <i class="bi bi-bed"></i> Beds: {{ hospital.available_beds }} / {{ hospital.total_beds }} available
+                        <i class="bi bi-bed"></i> Beds: {{ hospital.available_beds_count }} / {{ hospital.total_beds }} available
                     </p>
                     <a href="{% url 'hospitals:hospital_detail' hospital.pk %}" class="btn btn-primary btn-sm">View Details</a>
                 </div>

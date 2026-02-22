@@ -75,6 +75,14 @@ class HospitalDetailView(LoginRequiredMixin, DetailView):
                 ).exists()
         context['can_review'] = can_review
         context['has_reviewed'] = has_reviewed
+        # Can doctor request to join?
+        can_request_join = False
+        if self.request.user.is_authenticated and self.request.user.role == 'DOCTOR' and self.request.user.is_approved:
+            doc_profile = getattr(self.request.user, 'doctor_profile', None)
+            if doc_profile and doc_profile.hospital_id != hospital.id:
+                req = hospital.doctor_requests.filter(doctor=doc_profile).first()
+                can_request_join = req is None or req.status == 'REJECTED'
+        context['can_request_join'] = can_request_join
         return context
 
 

@@ -5,10 +5,11 @@ from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
-from django.http import JsonResponse
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import DoctorProfile
 from appointments.models import Appointment
+from hospitals.models import Hospital, DoctorHospitalRequest
 
 
 class DoctorSearchView(LoginRequiredMixin, ListView):
@@ -123,3 +124,37 @@ class DoctorDetailView(LoginRequiredMixin, DetailView):
             current = dt.time()
 
         return slots
+
+
+def request_join_hospital(request, hospital_id):
+    """Doctor (approved by system admin) sends join request to hospital"""
+    if not request.user.is_authenticated or request.user.role != 'DOCTOR':
+        messages.error(request, 'Permission denied.')
+        return redirect('accounts:login')
+    if not request.user.is_approved:
+        messages.error(request, 'Your account must be approved by the system admin first.')
+        return redirect('accounts:doctor_dashboard')
+
+    hospital = get_object_or_404(Hospital, pk=hospital_id)
+    doctor_profile = getattr(request.user, 'doctor_profile', None)
+    if not doctor_profile:
+        messages.error(request, 'Doctor profile not found.')
+        return redirect('accounts:doctor_dashboard')
+
+    req, created = DoctorHospitalRequest.objects.get_or_create(
+        doctor=doctor_profile,
+        hospital=hospital,
+        defaults={'status': 'PENDING'}
+    )
+    if not created:
+        if req.status == 'PENDING':
+            messages.info(request, 'You already have a pending request for this hospital.')
+        elif req.status == 'APPROVED':
+            messages.info(request, 'You are already associated with this hospital.')
+        else:
+            req.status = 'PENDING'
+            req.save()
+            messages.success(request, 'Join request sent.')
+    else:
+        messages.success(request, f'Join request sent to {hospital.name}.')
+    return redirect('hospitals:hospital_detail', pk=hospital_id)

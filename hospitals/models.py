@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Hospital(models.Model):
@@ -20,9 +21,9 @@ class Hospital(models.Model):
     email = models.EmailField(blank=True)
     website = models.URLField(blank=True)
     description = models.TextField(blank=True)
-    facilities = models.TextField(blank=True)  # Comma-separated or JSON
+    facilities = models.TextField(blank=True, help_text="Departments - comma separated")
     total_beds = models.PositiveIntegerField(default=0)
-    available_beds = models.PositiveIntegerField(default=0)
+    available_beds = models.PositiveIntegerField(default=0)  # Kept for migration; use available_beds_count for dynamic
     logo = models.ImageField(upload_to='hospital_logos/', blank=True, null=True)
     verification_document = models.FileField(upload_to='hospital_verifications/', blank=True, null=True, help_text="Upload registration certificate or license for verification")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -41,6 +42,25 @@ class Hospital(models.Model):
     def total_doctors(self):
         """Get total number of doctors in this hospital"""
         return self.doctors.count()
+
+    @property
+    def occupied_beds_count(self):
+        """Count of beds occupied by active admissions (discharge_time null or future)"""
+        from django.db.models import Q
+        return self.admissions.filter(
+            Q(discharge_time__isnull=True) | Q(discharge_time__gt=timezone.now())
+        ).count()
+
+    @property
+    def available_beds_count(self):
+        """Dynamically calculated: total_beds - occupied (do not edit; set total_beds only)"""
+        return max(0, self.total_beds - self.occupied_beds_count)
+
+    def get_available_beds_display(self):
+        """For admin list_display (avoids property in admin)"""
+        return self.available_beds_count
+
+    get_available_beds_display.short_description = 'Available beds'
 
     @property
     def average_rating(self):
@@ -75,3 +95,94 @@ class HospitalReview(models.Model):
 
     def __str__(self):
         return f"Review by {self.patient.username} for {self.hospital.name}"
+
+
+class DoctorHospitalRequest(models.Model):
+    """Doctor join request - two-level approval: System Admin approves doctor, then doctor requests hospital"""
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+    doctor = models.ForeignKey(
+        'doctors.DoctorProfile',
+        on_delete=models.CASCADE,
+        related_name='hospital_requests'
+    )
+    hospital = models.ForeignKey(
+        Hospital,
+        on_delete=models.CASCADE,
+        related_name='doctor_requests'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'doctor_hospital_requests'
+        verbose_name = 'Doctor Hospital Request'
+        verbose_name_plural = 'Doctor Hospital Requests'
+        unique_together = ('doctor', 'hospital')
+
+    def __str__(self):
+        return f"{self.doctor} -> {self.hospital} ({self.status})"
+
+
+class Admission(models.Model):
+    """Patient admission - bed occupancy is time-based"""
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='admissions',
+        limit_choices_to={'role': 'PATIENT'}
+    )
+    hospital = models.ForeignKey(
+        Hospital,
+        on_delete=models.CASCADE,
+        related_name='admissions'
+    )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admissions_attended',
+        limit_choices_to={'role': 'DOCTOR'}
+    )
+    appointment = models.ForeignKey(
+        'appointments.Appointment',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admissions'
+    )
+    admission_time = models.DateTimeField()
+    expected_discharge_time = models.DateTimeField(null=True, blank=True)
+    discharge_time = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'admissions'
+        verbose_name = 'Admission'
+        verbose_name_plural = 'Admissions'
+        ordering = ['-admission_time']
+
+    def __str__(self):
+        return f"{self.patient} at {self.hospital} from {self.admission_time}"
+
+    @property
+    def is_active(self):
+        """Admission is active if not yet discharged or discharge is in future"""
+        if self.discharge_time is None:
+            return True
+        return self.discharge_time > timezone.now()
+
+    @property
+    def duration_of_stay(self):
+        """Duration in hours if discharged"""
+        if not self.discharge_time:
+            return None
+        delta = self.discharge_time - self.admission_time
+        return round(delta.total_seconds() / 3600, 1)

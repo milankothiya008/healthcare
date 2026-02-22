@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Doctors{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-people"></i> Hospital Doctors</h2>
+        <a href="{% url 'hospitals:admin_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if doctors %}
+            <div class="row">
+                {% for doc in doctors %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex mb-3">
+                                {% if doc.profile_picture %}
+                                <img src="{{ doc.profile_picture.url }}" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                {% else %}
+                                <i class="bi bi-person-circle me-3" style="font-size: 3rem; color: #6c757d;"></i>
+                                {% endif %}
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">Dr. {{ doc.user.get_full_name|default:doc.user.username }}</h6>
+                                    <p class="small text-muted mb-0">{{ doc.get_specialization_display }}</p>
+                                    <p class="small mb-0">{{ doc.years_of_experience }} yrs exp</p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'hospitals:admin_doctor_detail' doc.pk %}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                <form method="post" action="{% url 'hospitals:admin_remove_doctor' doc.pk %}" class="d-inline" onsubmit="return confirm('Remove this doctor from the hospital?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <nav class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-muted mb-0">No doctors associated with this hospital.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

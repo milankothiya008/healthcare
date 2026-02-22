@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Join Requests{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-plus"></i> Pending Doctor Requests</h2>
+        <a href="{% url 'hospitals:admin_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if requests %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Specialization</th>
+                            <th>Experience</th>
+                            <th>Qualification</th>
+                            <th>Requested</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requests %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'hospitals:admin_doctor_request_detail' req.pk %}" class="text-decoration-none d-flex align-items-center">
+                                    {% if req.doctor.profile_picture %}
+                                    <img src="{{ req.doctor.profile_picture.url }}" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                    <i class="bi bi-person-circle me-2" style="font-size: 2rem; color: #6c757d;"></i>
+                                    {% endif %}
+                                    <span>Dr. {{ req.doctor.user.get_full_name|default:req.doctor.user.username }}</span>
+                                </a>
+                            </td>
+                            <td>{{ req.doctor.get_specialization_display }}</td>
+                            <td>{{ req.doctor.years_of_experience }} yrs</td>
+                            <td>{{ req.doctor.qualification|truncatewords:5 }}</td>
+                            <td>{{ req.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                <form method="post" action="{% url 'hospitals:admin_approve_doctor_request' req.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                </form>
+                                <form method="post" action="{% url 'hospitals:admin_reject_doctor_request' req.pk %}" class="d-inline" onsubmit="return confirm('Reject this request?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <nav class="mt-3">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-muted mb-0">No pending doctor requests.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

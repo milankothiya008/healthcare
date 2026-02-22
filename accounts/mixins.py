@@ -48,8 +48,8 @@ class PatientRequiredMixin(RoleRequiredMixin):
 
 
 class HospitalRequiredMixin(RoleRequiredMixin):
-    """Mixin to require Hospital role"""
-    allowed_roles = ['HOSPITAL']
+    """Mixin to require Hospital Admin role - only own hospital data"""
+    allowed_roles = ['HOSPITAL', 'HOSPITAL_ADMIN']
     
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_approved:

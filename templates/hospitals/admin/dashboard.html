@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}Hospital Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hospital-dash { --hd-primary: #0f766e; --hd-primary-light: #ccfbf1; --hd-card-bg: #fff; --hd-muted: #64748b; }
+    .hospital-dash .page-header { margin-bottom: 1.75rem; }
+    .hospital-dash .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0; }
+    .hospital-dash .page-header .hospital-name { font-size: 0.95rem; color: var(--hd-muted); margin-top: 0.25rem; }
+    .hospital-dash .stat-card {
+        background: var(--hd-card-bg);
+        border-radius: 14px;
+        padding: 1.25rem;
+        height: 100%;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .hospital-dash .stat-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .hospital-dash .stat-card .stat-label { font-size: 0.8rem; color: var(--hd-muted); font-weight: 500; margin-bottom: 0.4rem; }
+    .hospital-dash .stat-card .stat-value { font-size: 1.65rem; font-weight: 700; color: #0f172a; }
+    .hospital-dash .stat-card .stat-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+    }
+    .hospital-dash .stat-card.stat-doctors .stat-icon { background: #dbeafe; color: #1d4ed8; }
+    .hospital-dash .stat-card.stat-appts .stat-icon { background: #dcfce7; color: #15803d; }
+    .hospital-dash .stat-card.stat-today .stat-icon { background: #e0e7ff; color: #4f46e5; }
+    .hospital-dash .stat-card.stat-admitted .stat-icon { background: #fef3c7; color: #b45309; }
+    .hospital-dash .stat-card.stat-available .stat-icon { background: #d1fae5; color: #047857; }
+    .hospital-dash .stat-card.stat-occupied .stat-icon { background: #fee2e2; color: #b91c1c; }
+    .hospital-dash .section-title { font-size: 1rem; font-weight: 600; color: #334155; margin-bottom: 1rem; }
+    .hospital-dash .action-card {
+        display: block;
+        background: var(--hd-card-bg);
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1.35rem;
+        text-align: center;
+        text-decoration: none;
+        color: #334155;
+        height: 100%;
+        transition: all 0.2s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .hospital-dash .action-card:hover {
+        border-color: var(--hd-primary);
+        color: var(--hd-primary);
+        box-shadow: 0 8px 24px rgba(15, 118, 110, 0.12);
+        transform: translateY(-3px);
+    }
+    .hospital-dash .action-card .action-icon {
+        width: 52px; height: 52px;
+        margin: 0 auto 0.75rem;
+        border-radius: 14px;
+        background: var(--hd-primary-light);
+        color: var(--hd-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .hospital-dash .action-card:hover .action-icon { background: #0f766e; color: #fff; }
+    .hospital-dash .action-card .action-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.2rem; }
+    .hospital-dash .action-card .action-desc { font-size: 0.8rem; color: var(--hd-muted); }
+    .hospital-dash .card-table {
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        overflow: hidden;
+    }
+    .hospital-dash .card-table .card-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #334155;
+    }
+    .hospital-dash .card-table .table { margin: 0; }
+    .hospital-dash .card-table .table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--hd-muted); font-weight: 600; padding: 0.85rem 1.25rem; }
+    .hospital-dash .card-table .table td { padding: 0.85rem 1.25rem; vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid hospital-dash">
+    <div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <h1><i class="bi bi-building-gear me-2"></i>Hospital Admin</h1>
+            <p class="hospital-name mb-0">{{ hospital.name|default:"" }}</p>
+        </div>
+        <a href="{% url 'hospitals:admin_profile' %}" class="btn btn-primary rounded-pill px-4"><i class="bi bi-pencil me-2"></i>Edit Profile</a>
+    </div>
+
+    {% if hospital %}
+
+    <!-- Stats row -->
+    <p class="section-title mb-0">Overview</p>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card stat-doctors d-flex align-items-center">
+                <div class="stat-icon me-3"><i class="bi bi-people-fill"></i></div>
+                <div>
+                    <div class="stat-label">Total Doctors</div>
+                    <div class="stat-value">{{ total_doctors }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card stat-appts d-flex align-items-center">
+                <div class="stat-icon me-3"><i class="bi bi-calendar-check-fill"></i></div>
+                <div>
+                    <div class="stat-label">Appointments</div>
+                    <div class="stat-value">{{ total_appointments }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card stat-today d-flex align-items-center">
+                <div class="stat-icon me-3"><i class="bi bi-calendar-day-fill"></i></div>
+                <div>
+                    <div class="stat-label">Today</div>
+                    <div class="stat-value">{{ today_appointments }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card stat-admitted d-flex align-items-center">
+                <div class="stat-icon me-3"><i class="bi bi-person-lines-fill"></i></div>
+                <div>
+                    <div class="stat-label">Admitted</div>
+                    <div class="stat-value">{{ total_admitted }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card stat-available d-flex align-items-center">
+                <div class="stat-icon me-3"><i class="bi bi-bed"></i></div>
+                <div>
+                    <div class="stat-label">Available Beds</div>
+                    <div class="stat-value">{{ available_beds }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="stat-card stat-occupied d-flex align-items-center">
+                <div class="stat-icon me-3"><i class="bi bi-hospital-fill"></i></div>
+                <div>
+                    <div class="stat-label">Occupied Beds</div>
+                    <div class="stat-value">{{ occupied_beds }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick actions -->
+    <p class="section-title">Quick actions</p>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <a href="{% url 'hospitals:admin_doctor_requests' %}" class="action-card">
+                <div class="action-icon"><i class="bi bi-person-plus-fill"></i></div>
+                <div class="action-title">Doctor Requests</div>
+                <div class="action-desc">Approve or reject</div>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a href="{% url 'hospitals:admin_doctor_list' %}" class="action-card">
+                <div class="action-icon"><i class="bi bi-people-fill"></i></div>
+                <div class="action-title">Manage Doctors</div>
+                <div class="action-desc">View and remove</div>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a href="{% url 'hospitals:admin_appointments' %}" class="action-card">
+                <div class="action-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <div class="action-title">Appointments</div>
+                <div class="action-desc">Filter and update</div>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a href="{% url 'hospitals:admin_admissions' %}" class="action-card">
+                <div class="action-icon"><i class="bi bi-hospital-fill"></i></div>
+                <div class="action-title">Admissions</div>
+                <div class="action-desc">Admit and discharge</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Upcoming appointments -->
+    <div class="card-table">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-calendar-event me-2"></i>Upcoming Appointments</span>
+            <a href="{% url 'hospitals:admin_appointments' %}" class="btn btn-sm btn-outline-primary rounded-pill">View all</a>
+        </div>
+        <div class="card-body p-0">
+            {% if upcoming_appointments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Doctor</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for apt in upcoming_appointments %}
+                        <tr>
+                            <td>{{ apt.patient.get_full_name|default:apt.patient.username }}</td>
+                            <td>{{ apt.doctor.get_full_name|default:apt.doctor.username }}</td>
+                            <td>{{ apt.appointment_date }}</td>
+                            <td>{{ apt.appointment_time|time:"H:i" }}</td>
+                            <td><span class="badge bg-{% if apt.status == 'CONFIRMED' %}success{% else %}warning text-dark{% endif %} rounded-pill">{{ apt.get_status_display }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-calendar-x" style="font-size: 2.5rem;"></i>
+                <p class="mt-2 mb-0">No upcoming appointments</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% else %}
+    <div class="alert alert-warning border-0 rounded-3 shadow-sm">
+        <i class="bi bi-exclamation-triangle me-2"></i>Hospital profile not found. Please contact the administrator.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

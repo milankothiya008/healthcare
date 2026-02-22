@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Request - {{ request_obj.doctor.user.get_full_name|default:request_obj.doctor.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'hospitals:admin_doctor_requests' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Requests</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    {% if request_obj.doctor.profile_picture %}
+                    <img src="{{ request_obj.doctor.profile_picture.url }}" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                    <i class="bi bi-person-circle text-muted" style="font-size: 8rem;"></i>
+                    {% endif %}
+                    <h4>Dr. {{ request_obj.doctor.user.get_full_name|default:request_obj.doctor.user.username }}</h4>
+                    <p class="text-muted">{{ request_obj.doctor.get_specialization_display }}</p>
+                    <div class="d-grid gap-2">
+                        <form method="post" action="{% url 'hospitals:admin_approve_doctor_request' request_obj.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">Approve Request</button>
+                        </form>
+                        <form method="post" action="{% url 'hospitals:admin_reject_doctor_request' request_obj.pk %}" onsubmit="return confirm('Reject this request?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100">Reject</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header"><h5 class="mb-0">Doctor Details</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Qualification</label>
+                            <p class="mb-0">{{ request_obj.doctor.qualification }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Experience</label>
+                            <p class="mb-0">{{ request_obj.doctor.years_of_experience }} years</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">License Number</label>
+                            <p class="mb-0">{{ request_obj.doctor.license_number }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Consultation Fee</label>
+                            <p class="mb-0">${{ request_obj.doctor.consultation_fee }}</p>
+                        </div>
+                        {% if request_obj.doctor.bio %}
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small">Bio</label>
+                            <p class="mb-0">{{ request_obj.doctor.bio }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
