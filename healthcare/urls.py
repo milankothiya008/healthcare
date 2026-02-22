@@ -30,7 +30,10 @@ urlpatterns = [
     path('', home, name='home'),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
-    # Add other app URLs here as needed
+    path('hospitals/', include('hospitals.urls')),
+    path('doctors/', include('doctors.urls')),
+    path('appointments/', include('appointments.urls')),
+    path('patients/', include('patients.urls')),
 ]
 
 # Serve media files in development

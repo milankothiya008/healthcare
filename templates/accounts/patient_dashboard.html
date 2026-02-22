@@ -4,35 +4,115 @@
 
 {% block content %}
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-person-heart"></i> Patient Dashboard</h2>
-        {% if patient_profile %}
-        <div>
-            {% if patient_profile.blood_group %}
-            <span class="badge bg-danger">Blood Group: {{ patient_profile.blood_group }}</span>
-            {% endif %}
+    <!-- Welcome & Profile Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="me-4">
+                        <a href="{% url 'patients:profile_edit' %}" class="text-decoration-none" title="Click to update photo">
+                            {% if patient_profile.profile_picture %}
+                            <img src="{{ patient_profile.profile_picture.url }}" alt="Profile" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;">
+                            {% elif user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;">
+                            {% else %}
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; cursor: pointer;">
+                                <i class="bi bi-person-fill text-white" style="font-size: 2.5rem;"></i>
+                            </div>
+                            {% endif %}
+                        </a>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h2 class="mb-1">Welcome, {{ user.get_full_name|default:user.username }}!</h2>
+                        <p class="text-muted mb-0">Manage your appointments and health records</p>
+                        {% if patient_profile.blood_group %}
+                        <span class="badge bg-danger mt-2">Blood Group: {{ patient_profile.blood_group }}</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <a href="{% url 'patients:profile_edit' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil-square"></i> Manage Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-        {% endif %}
     </div>
-    
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <a href="{% url 'hospitals:hospital_search' %}" class="text-decoration-none">
+                <div class="card h-100 border-primary">
+                    <div class="card-body text-center">
+                        <i class="bi bi-building text-primary" style="font-size: 2.5rem;"></i>
+                        <h6 class="mt-2 mb-0">Search Hospital</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-3">
+            <a href="{% url 'doctors:doctor_search' %}" class="text-decoration-none">
+                <div class="card h-100 border-info">
+                    <div class="card-body text-center">
+                        <i class="bi bi-heart-pulse text-info" style="font-size: 2.5rem;"></i>
+                        <h6 class="mt-2 mb-0">Search Doctor</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-3">
+            <a href="{% url 'appointments:emergency_booking' %}" class="text-decoration-none">
+                <div class="card h-100 border-danger bg-danger bg-opacity-10">
+                    <div class="card-body text-center">
+                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 2.5rem;"></i>
+                        <h6 class="mt-2 mb-0 text-danger">Emergency Appointment</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 mb-3">
+            <a href="{% url 'appointments:history' %}" class="text-decoration-none">
+                <div class="card h-100 border-success">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-check text-success" style="font-size: 2.5rem;"></i>
+                        <h6 class="mt-2 mb-0">Appointments</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <div class="card stat-card">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-white-50 mb-2">Total Appointments</h6>
-                            <h2 class="mb-0">{{ total_appointments }}</h2>
+                            <h6 class="text-white-50 mb-2">Total Past Appointments</h6>
+                            <h2 class="mb-0">{{ past_appointments_count }}</h2>
                         </div>
                         <i class="bi bi-calendar-check" style="font-size: 3rem; opacity: 0.5;"></i>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <div class="card stat-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Upcoming Appointments</h6>
+                            <h2 class="mb-0">{{ upcoming_appointments|length }}</h2>
+                        </div>
+                        <i class="bi bi-calendar-event" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card info">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -45,46 +125,58 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Upcoming Appointments -->
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Upcoming Appointments</h5>
+                    <a href="{% url 'appointments:history' %}" class="btn btn-sm btn-outline-primary">View All</a>
                 </div>
                 <div class="card-body">
                     {% if upcoming_appointments %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Doctor</th>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th>Reason</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for appointment in upcoming_appointments %}
-                                    <tr>
-                                        <td>{{ appointment.doctor.get_full_name|default:appointment.doctor.username }}</td>
-                                        <td>{{ appointment.appointment_date }}</td>
-                                        <td>{{ appointment.appointment_time }}</td>
-                                        <td>{{ appointment.reason|truncatewords:10 }}</td>
-                                        <td>
-                                            <span class="badge bg-{% if appointment.status == 'CONFIRMED' %}success{% elif appointment.status == 'PENDING' %}warning{% else %}secondary{% endif %}">
-                                                {{ appointment.get_status_display }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Doctor</th>
+                                    <th>Hospital</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for apt in upcoming_appointments %}
+                                <tr>
+                                    <td>{{ apt.doctor.get_full_name|default:apt.doctor.username }}</td>
+                                    <td>{{ apt.hospital.name|default:"—" }}</td>
+                                    <td>{{ apt.appointment_date }}</td>
+                                    <td>{{ apt.appointment_time|time:"H:i" }}</td>
+                                    <td>{{ apt.reason|truncatewords:8 }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if apt.status == 'CONFIRMED' %}success{% elif apt.status == 'PENDING' %}warning{% else %}secondary{% endif %}">
+                                            {{ apt.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if apt.can_be_cancelled %}
+                                        <form method="post" action="{% url 'appointments:cancel' apt.pk %}" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% else %}
-                        <p class="text-muted mb-0">No upcoming appointments. <a href="#">Book an appointment</a></p>
+                    <p class="text-muted mb-0">No upcoming appointments. <a href="{% url 'doctors:doctor_search' %}">Book an appointment</a></p>
                     {% endif %}
                 </div>
             </div>

@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-person-gear"></i> Manage Profile</h2>
+        <a href="{% url 'accounts:patient_dashboard' %}" class="btn btn-outline-primary">Back to Dashboard</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <label for="profilePhotoInput" class="d-block" style="cursor: pointer;" title="Click to change photo">
+                        {% if object.profile_picture %}
+                        <img id="profilePreview" src="{{ object.profile_picture.url }}" alt="Profile" class="rounded-circle mb-2" style="width: 150px; height: 150px; object-fit: cover;">
+                        {% elif user.profile_picture %}
+                        <img id="profilePreview" src="{{ user.profile_picture.url }}" alt="Profile" class="rounded-circle mb-2" style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div id="profilePreview" class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 150px; height: 150px;">
+                            <i class="bi bi-person-plus text-white" style="font-size: 4rem;"></i>
+                        </div>
+                        {% endif %}
+                    </label>
+                    <p class="small text-muted">Click photo to upload</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Personal Details</h5></div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="file" id="profilePhotoInput" name="profile_picture" accept="image/*" class="d-none" onchange="previewImage(this)">
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone</label>
+                                {{ form.phone_number }}
+                                {% if form.phone_number.errors %}<div class="text-danger small">{{ form.phone_number.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date of Birth</label>
+                                {{ form.date_of_birth }}
+                                {% if form.date_of_birth.errors %}<div class="text-danger small">{{ form.date_of_birth.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Address</label>
+                                {{ form.address }}
+                                {% if form.address.errors %}<div class="text-danger small">{{ form.address.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Gender</label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}<div class="text-danger small">{{ form.gender.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Blood Group</label>
+                                {{ form.blood_group }}
+                                {% if form.blood_group.errors %}<div class="text-danger small">{{ form.blood_group.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Emergency Contact Name</label>
+                                {{ form.emergency_contact_name }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Emergency Contact Phone</label>
+                                {{ form.emergency_contact_phone }}
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Medical History</label>
+                                {{ form.medical_history }}
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Allergies</label>
+                                {{ form.allergies }}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var preview = document.getElementById('profilePreview');
+            if (preview.tagName === 'IMG') {
+                preview.src = e.target.result;
+            } else {
+                var img = document.createElement('img');
+                img.id = 'profilePreview';
+                img.src = e.target.result;
+                img.className = 'rounded-circle mb-2';
+                img.style.cssText = 'width: 150px; height: 150px; object-fit: cover;';
+                preview.parentNode.replaceChild(img, preview);
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+document.querySelector('label[for="profilePhotoInput"]').addEventListener('click', function(e) {
+    if (e.target.tagName !== 'INPUT') document.getElementById('profilePhotoInput').click();
+});
+</script>
+{% endblock %}

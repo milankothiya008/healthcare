@@ -41,3 +41,37 @@ class Hospital(models.Model):
     def total_doctors(self):
         """Get total number of doctors in this hospital"""
         return self.doctors.count()
+
+    @property
+    def average_rating(self):
+        """Calculate average rating from reviews"""
+        from django.db.models import Avg
+        result = self.reviews.aggregate(avg=Avg('rating'))
+        return round(result['avg'] or 0, 1)
+
+
+class HospitalReview(models.Model):
+    """Review for hospital - patient can review only after completed appointment"""
+    hospital = models.ForeignKey(
+        Hospital,
+        on_delete=models.CASCADE,
+        related_name='reviews'
+    )
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='hospital_reviews',
+        limit_choices_to={'role': 'PATIENT'}
+    )
+    rating = models.PositiveSmallIntegerField()  # 1-5
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'hospital_reviews'
+        verbose_name = 'Hospital Review'
+        verbose_name_plural = 'Hospital Reviews'
+        unique_together = ('hospital', 'patient')
+
+    def __str__(self):
+        return f"Review by {self.patient.username} for {self.hospital.name}"

@@ -241,18 +241,20 @@ class PatientDashboardView(PatientRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+        today = timezone.now().date()
         patient_profile = getattr(self.request.user, 'patient_profile', None)
         
         # Statistics
-        context['total_appointments'] = Appointment.objects.filter(patient=self.request.user).count()
-        context['upcoming_appointments'] = Appointment.objects.filter(
-            patient=self.request.user,
-            appointment_date__gte=timezone.now().date(),
+        all_appointments = Appointment.objects.filter(patient=self.request.user)
+        context['total_appointments'] = all_appointments.count()
+        context['past_appointments_count'] = all_appointments.filter(
+            Q(appointment_date__lt=today) | Q(status='COMPLETED')
+        ).count()
+        context['upcoming_appointments'] = all_appointments.filter(
+            appointment_date__gte=today,
             status__in=['PENDING', 'CONFIRMED']
         ).order_by('appointment_date', 'appointment_time')[:10]
         context['total_documents'] = Document.objects.filter(patient=self.request.user).count()
-        
         context['patient_profile'] = patient_profile
         
         return context

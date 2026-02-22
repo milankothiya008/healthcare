@@ -3,6 +3,37 @@
 {% block title %}Admin Dashboard{% endblock %}
 
 {% block content %}
+<style>
+    .btn-approve-reject {
+        transition: all 0.2s ease;
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 0.4rem 0.75rem;
+    }
+    .btn-approve-reject:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .btn-view-doc {
+        transition: all 0.2s ease;
+        font-weight: 500;
+        border-radius: 8px;
+        border-width: 1.5px;
+    }
+    .btn-view-doc:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(13, 110, 253, 0.25);
+    }
+    .approval-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .approval-actions form {
+        margin: 0;
+    }
+</style>
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-speedometer2"></i> Admin Dashboard</h2>
@@ -89,7 +120,7 @@
                 <div class="card-body">
                     {% if pending_doctors %}
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
@@ -114,26 +145,28 @@
                                         <td>{{ item.user.phone_number }}</td>
                                         <td>
                                             {% if item.has_verification %}
-                                                <a href="{{ item.profile.verification_document.url }}" target="_blank" class="btn btn-sm btn-info">
-                                                    <i class="bi bi-file-earmark-pdf"></i> View Document
+                                                <a href="{{ item.profile.verification_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary btn-view-doc" title="Open verification document">
+                                                    <i class="bi bi-file-earmark-pdf me-1"></i> View Document
                                                 </a>
                                             {% else %}
-                                                <span class="badge bg-danger">No Document</span>
+                                                <span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i> No Document</span>
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <form method="post" action="{% url 'accounts:approve_doctor' item.user.id %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-success">
-                                                    <i class="bi bi-check-circle"></i> Approve
-                                                </button>
-                                            </form>
-                                            <form method="post" action="{% url 'accounts:reject_doctor' item.user.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to reject this doctor?');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-danger">
-                                                    <i class="bi bi-x-circle"></i> Reject
-                                                </button>
-                                            </form>
+                                            <div class="approval-actions">
+                                                <form method="post" action="{% url 'accounts:approve_doctor' item.user.id %}" class="d-inline m-0">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-success btn-approve-reject">
+                                                        <i class="bi bi-check-circle-fill me-1"></i> Approve
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{% url 'accounts:reject_doctor' item.user.id %}" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to reject this doctor?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-approve-reject">
+                                                        <i class="bi bi-x-circle-fill me-1"></i> Reject
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -155,7 +188,7 @@
                 <div class="card-body">
                     {% if pending_hospitals %}
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
@@ -180,26 +213,28 @@
                                         <td>{{ item.user.phone_number }}</td>
                                         <td>
                                             {% if item.has_verification %}
-                                                <a href="{{ item.hospital.verification_document.url }}" target="_blank" class="btn btn-sm btn-info">
-                                                    <i class="bi bi-file-earmark-pdf"></i> View Document
+                                                <a href="{{ item.hospital.verification_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary btn-view-doc" title="Open verification document">
+                                                    <i class="bi bi-file-earmark-pdf me-1"></i> View Document
                                                 </a>
                                             {% else %}
-                                                <span class="badge bg-danger">No Document</span>
+                                                <span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i> No Document</span>
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <form method="post" action="{% url 'accounts:approve_hospital' item.user.id %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-success">
-                                                    <i class="bi bi-check-circle"></i> Approve
-                                                </button>
-                                            </form>
-                                            <form method="post" action="{% url 'accounts:reject_hospital' item.user.id %}" class="d-inline" onsubmit="return confirm('Are you sure you want to reject this hospital?');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-danger">
-                                                    <i class="bi bi-x-circle"></i> Reject
-                                                </button>
-                                            </form>
+                                            <div class="approval-actions">
+                                                <form method="post" action="{% url 'accounts:approve_hospital' item.user.id %}" class="d-inline m-0">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-success btn-approve-reject">
+                                                        <i class="bi bi-check-circle-fill me-1"></i> Approve
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{% url 'accounts:reject_hospital' item.user.id %}" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to reject this hospital?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-approve-reject">
+                                                        <i class="bi bi-x-circle-fill me-1"></i> Reject
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}

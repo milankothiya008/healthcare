@@ -128,6 +128,11 @@
                             {% if not user.is_approved and user.role in 'DOCTOR,HOSPITAL' %}
                             <li><span class="dropdown-item-text text-warning"><i class="bi bi-clock-history"></i> Pending Approval</span></li>
                             {% endif %}
+                            {% if user.role == 'PATIENT' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'patients:profile_edit' %}"><i class="bi bi-person-gear"></i> Manage Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'appointments:history' %}"><i class="bi bi-calendar-check"></i> My Appointments</a></li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">

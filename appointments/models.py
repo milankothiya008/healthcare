@@ -35,6 +35,7 @@ class Appointment(models.Model):
     appointment_date = models.DateField()
     appointment_time = models.TimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    is_emergency = models.BooleanField(default=False)
     reason = models.TextField(help_text="Reason for appointment")
     notes = models.TextField(blank=True, help_text="Additional notes")
     prescription = models.TextField(blank=True, help_text="Prescription details")

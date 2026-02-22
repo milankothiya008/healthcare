@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'doctors:doctor_search' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Search</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if doctor.profile_picture %}
+                    <img src="{{ doctor.profile_picture.url }}" alt="" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% elif doctor.user.profile_picture %}
+                    <img src="{{ doctor.user.profile_picture.url }}" alt="" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                    <i class="bi bi-person-circle text-muted" style="font-size: 8rem;"></i>
+                    {% endif %}
+                    <h3>Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}</h3>
+                    <p class="text-muted">{{ doctor.get_specialization_display }}</p>
+                    <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
+                    <p><strong>Experience:</strong> {{ doctor.years_of_experience }} years</p>
+                    <p><strong>Consultation Fee:</strong> ${{ doctor.consultation_fee }}</p>
+                    {% if doctor.hospital %}
+                    <p><i class="bi bi-building"></i> {{ doctor.hospital.name }}</p>
+                    {% endif %}
+                    {% if doctor.bio %}
+                    <p class="small">{{ doctor.bio }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">Book Appointment</h5></div>
+                <div class="card-body">
+                    {% if user.role == 'PATIENT' and doctor.hospital %}
+                    <form method="post" action="{% url 'appointments:book_normal' doctor.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="hospital_id" value="{{ doctor.hospital.id }}">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Select Date</label>
+                                <select name="date" class="form-select" required id="dateSelect">
+                                    <option value="">Choose date</option>
+                                    {% for d in available_dates %}
+                                    <option value="{{ d|date:'Y-m-d' }}" {% if selected_date and selected_date == d %}selected{% endif %}>{{ d|date:"l, M d, Y" }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Select Time</label>
+                                <select name="time" class="form-select" required>
+                                    <option value="">{% if selected_date %}Choose time{% else %}Select date first{% endif %}</option>
+                                    {% for slot in available_slots %}
+                                    <option value="{{ slot|time:'H:i' }}">{{ slot|time:"g:i A" }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if selected_date and not available_slots %}
+                                <small class="text-muted">No slots available for this date.</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason for visit</label>
+                            <textarea name="reason" class="form-control" rows="2" required placeholder="Brief reason for appointment"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Book Appointment</button>
+                    </form>
+                    <script>
+                    document.getElementById('dateSelect').addEventListener('change', function() {
+                        var url = new URL(window.location.href);
+                        url.searchParams.set('date', this.value);
+                        window.location.href = url.toString();
+                    });
+                    </script>
+                    {% else %}
+                    <p class="text-muted">Please <a href="{% url 'accounts:login' %}">login as a patient</a> to book.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

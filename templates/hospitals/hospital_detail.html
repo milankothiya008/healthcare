@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ hospital.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'hospitals:hospital_search' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Search</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if hospital.logo %}
+                    <img src="{{ hospital.logo.url }}" alt="{{ hospital.name }}" class="rounded mb-3" style="width: 200px; height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="rounded bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 200px; height: 200px;">
+                        <i class="bi bi-building text-white" style="font-size: 5rem;"></i>
+                    </div>
+                    {% endif %}
+                    <h3>{{ hospital.name }}</h3>
+                    <p class="text-muted">{{ hospital.address }}{% if hospital.city %}, {{ hospital.city }}{% endif %}{% if hospital.state %} {{ hospital.state }}{% endif %}</p>
+                    <div class="mb-2">
+                        <span class="badge bg-warning text-dark fs-6"><i class="bi bi-star-fill"></i> {{ hospital.average_rating }} Average Rating</span>
+                    </div>
+                    <p class="mb-0"><i class="bi bi-bed"></i> {{ hospital.available_beds }} / {{ hospital.total_beds }} beds available</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">About</h5></div>
+                <div class="card-body">
+                    <p>{{ hospital.description|default:"No description available." }}</p>
+                    <p><strong>Departments:</strong> {{ hospital.facilities|default:"—" }}</p>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">Doctors at this Hospital</h5></div>
+                <div class="card-body">
+                    {% if doctors %}
+                    <div class="row">
+                        {% for doc in doctors %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body d-flex">
+                                    {% if doc.profile_picture %}
+                                    <img src="{{ doc.profile_picture.url }}" alt="" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                    {% elif doc.user.profile_picture %}
+                                    <img src="{{ doc.user.profile_picture.url }}" alt="" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                    {% else %}
+                                    <i class="bi bi-person-circle me-3" style="font-size: 3rem; color: #6c757d;"></i>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ doc.user.get_full_name|default:doc.user.username }}</h6>
+                                        <p class="small text-muted mb-1">{{ doc.get_specialization_display }} • {{ doc.years_of_experience }} yrs exp</p>
+                                        <a href="{% url 'doctors:doctor_detail' doc.pk %}" class="btn btn-sm btn-primary">Book Appointment</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No doctors listed.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Reviews</h5>
+                    {% if can_review %}
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#reviewModal">Write Review</button>
+                    {% elif has_reviewed %}
+                    <span class="badge bg-secondary">You have reviewed</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                    {% for r in reviews %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ r.patient.get_full_name|default:r.patient.username }}</strong>
+                            <span class="badge bg-warning text-dark">{{ r.rating }}/5</span>
+                        </div>
+                        <p class="mb-0 mt-1">{{ r.comment|default:"No comment" }}</p>
+                        <small class="text-muted">{{ r.created_at|date:"M d, Y" }}</small>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No reviews yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if can_review %}
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'hospitals:submit_review' hospital.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Write a Review</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Rating (1-5)</label>
+                        <select name="rating" class="form-select" required>
+                            <option value="1">1 - Poor</option>
+                            <option value="2">2 - Fair</option>
+                            <option value="3">3 - Good</option>
+                            <option value="4">4 - Very Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comment (optional)</label>
+                        <textarea name="comment" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

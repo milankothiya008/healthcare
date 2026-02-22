@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Emergency Appointment{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-exclamation-triangle-fill text-danger"></i> Emergency Appointment</h2>
+        <a href="{% url 'accounts:patient_dashboard' %}" class="btn btn-outline-primary">Back to Dashboard</a>
+    </div>
+
+    <div class="alert alert-warning">
+        <i class="bi bi-info-circle"></i> Only hospitals with available beds are shown. Booking will reserve one bed.
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="q" class="form-control" placeholder="Hospital name" value="{{ search_q }}">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" name="city" class="form-control" placeholder="City" value="{{ search_city }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary me-2"><i class="bi bi-search"></i> Search</button>
+                    <a href="{% url 'appointments:emergency_booking' %}" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for hospital in hospitals %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex mb-3">
+                        {% if hospital.logo %}
+                        <img src="{{ hospital.logo.url }}" alt="" class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded bg-secondary d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px;">
+                            <i class="bi bi-building text-white"></i>
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">{{ hospital.name }}</h5>
+                            <p class="small text-muted mb-0">{{ hospital.city|default:"" }} {{ hospital.address|truncatewords:5 }}</p>
+                            <span class="badge bg-success">{{ hospital.available_beds }} beds available</span>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'appointments:confirm_emergency' %}" onsubmit="return confirm('Confirm emergency booking at {{ hospital.name }}? One bed will be reserved.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="hospital_id" value="{{ hospital.pk }}">
+                        <div class="mb-2">
+                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="Reason (optional)" value="Emergency">
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-sm w-100">Book Emergency</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">No hospitals with available beds found.</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if hospitals.has_other_pages %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if hospitals.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ hospitals.previous_page_number }}{% if search_q %}&q={{ search_q }}{% endif %}{% if search_city %}&city={{ search_city }}{% endif %}">Previous</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ hospitals.number }} of {{ hospitals.paginator.num_pages }}</span></li>
+            {% if hospitals.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ hospitals.next_page_number }}{% if search_q %}&q={{ search_q }}{% endif %}{% if search_city %}&city={{ search_city }}{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from datetime import time
 
 
 class DoctorProfile(models.Model):
@@ -39,6 +40,9 @@ class DoctorProfile(models.Model):
         related_name='doctors'
     )
     is_available = models.BooleanField(default=True)
+    available_from = models.TimeField(default=time(9, 0), help_text="Start of working hours")
+    available_to = models.TimeField(default=time(17, 0), help_text="End of working hours")
+    slot_duration_minutes = models.PositiveIntegerField(default=30)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
