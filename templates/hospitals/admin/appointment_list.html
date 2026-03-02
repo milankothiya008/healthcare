@@ -54,7 +54,10 @@
                             </td>
                             <td>
                                 {% if apt.status == 'COMPLETED' or apt.status == 'CANCELLED' %}
-                                <span class="text-muted small">Read-only</span>
+                                <a href="{% url 'hospitals:admin_appointment_detail' apt.pk %}"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    View
+                                </a>
                                 {% elif apt.status == 'PENDING' %}
                                 <div class="btn-group btn-group-sm">
                                     <form method="post" action="{% url 'hospitals:admin_update_appointment_status' apt.pk %}" class="d-inline">

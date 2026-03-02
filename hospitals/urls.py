@@ -19,6 +19,7 @@ urlpatterns = [
     path('admin/doctors/<int:pk>/', admin_views.HospitalDoctorDetailView.as_view(), name='admin_doctor_detail'),
     path('admin/doctors/<int:pk>/remove/', admin_views.remove_doctor, name='admin_remove_doctor'),
     path('admin/appointments/', admin_views.HospitalAppointmentListView.as_view(), name='admin_appointments'),
+    path('admin/appointments/<int:pk>/', admin_views.HospitalAppointmentDetailView.as_view(), name='admin_appointment_detail'),
     path('admin/appointments/<int:pk>/status/', admin_views.update_appointment_status, name='admin_update_appointment_status'),
     path('admin/admissions/', admin_views.AdmissionListView.as_view(), name='admin_admissions'),
     path('admin/admissions/admit/', admin_views.admit_patient, name='admin_admit_patient'),

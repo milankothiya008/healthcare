@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Appointment Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-calendar-event"></i> Appointment Details</h2>
+        <a href="{% url 'hospitals:admin_appointments' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Appointments
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">General Information</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Patient:</strong> {{ appointment.patient.get_full_name|default:appointment.patient.username }}</p>
+                    <p class="mb-1"><strong>Doctor:</strong> Dr. {{ appointment.doctor.get_full_name|default:appointment.doctor.username }}</p>
+                    <p class="mb-1"><strong>Hospital:</strong> {{ appointment.hospital.name|default:"—" }}</p>
+                    <p class="mb-1"><strong>Date:</strong> {{ appointment.appointment_date }}</p>
+                    <p class="mb-1"><strong>Time:</strong> {{ appointment.appointment_time|time:"H:i" }}</p>
+                    <p class="mb-1"><strong>Status:</strong>
+                        <span class="badge {% if appointment.status == 'PENDING' %}bg-warning text-dark{% elif appointment.status == 'CONFIRMED' %}bg-primary{% elif appointment.status == 'COMPLETED' %}bg-success{% elif appointment.status == 'CANCELLED' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            {{ appointment.get_status_display }}
+                        </span>
+                        {% if appointment.is_emergency %}
+                        <span class="badge bg-danger">Emergency</span>
+                        {% endif %}
+                    </p>
+                    <p class="mb-0"><strong>Reason:</strong> {{ appointment.reason }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Medical Details</h5>
+                </div>
+                <div class="card-body">
+                    {% if can_view_medical_details %}
+                    <p><strong>Consultation Notes:</strong></p>
+                    <p class="border rounded p-2 bg-light">{{ appointment.notes|default:"No notes recorded." }}</p>
+
+                    <p class="mt-3"><strong>Prescription:</strong></p>
+                    <p class="border rounded p-2 bg-light">{{ appointment.prescription|default:"No prescription recorded." }}</p>
+                    {% else %}
+                    <p class="text-muted mb-0">
+                        Consultation notes and prescription are only visible after the appointment is marked
+                        <strong>Completed</strong>.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Attached Documents</h5>
+                </div>
+                <div class="card-body">
+                    {% if appointment.documents.all %}
+                    <ul class="list-group">
+                        {% for doc in appointment.documents.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ doc.title }}</strong>
+                                <div class="small text-muted">
+                                    {{ doc.get_document_type_display }} • {{ doc.file_size }} •
+                                    Uploaded by {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }} on
+                                    {{ doc.created_at|date:"M d, Y" }}
+                                </div>
+                            </div>
+                            <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                                View
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No documents attached to this appointment.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

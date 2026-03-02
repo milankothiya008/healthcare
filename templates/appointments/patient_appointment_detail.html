@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Appointment Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-file-medical"></i> Appointment Details</h2>
+        <a href="{% url 'appointments:history' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Appointments
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Visit Information</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Doctor:</strong>
+                        Dr. {{ appointment.doctor.get_full_name|default:appointment.doctor.username }}
+                    </p>
+                    <p class="mb-1"><strong>Hospital:</strong>
+                        {{ appointment.hospital.name|default:"—" }}
+                    </p>
+                    <p class="mb-1"><strong>Date:</strong> {{ appointment.appointment_date }}</p>
+                    <p class="mb-1"><strong>Time:</strong> {{ appointment.appointment_time|time:"H:i" }}</p>
+                    <p class="mb-1"><strong>Status:</strong>
+                        <span class="badge bg-info">{{ appointment.get_status_display }}</span>
+                    </p>
+                    <p class="mb-0"><strong>Reason:</strong> {{ appointment.reason }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Medical Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% if can_view_medical_details %}
+                    <p><strong>Consultation Notes:</strong></p>
+                    <p class="border rounded p-2 bg-light">{{ appointment.notes|default:"No notes added." }}</p>
+
+                    <p class="mt-3"><strong>Prescription:</strong></p>
+                    <p class="border rounded p-2 bg-light">{{ appointment.prescription|default:"No prescription added." }}</p>
+                    {% else %}
+                    <p class="text-muted mb-0">
+                        Consultation notes and prescription will be available once this appointment is marked as
+                        <strong>Completed</strong>.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Attached Medical Reports</h5>
+                </div>
+                <div class="card-body">
+                    {% if appointment_documents %}
+                    <ul class="list-group">
+                        {% for doc in appointment_documents %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ doc.title }}</strong>
+                                <div class="small text-muted">
+                                    {{ doc.get_document_type_display }} • {{ doc.file_size }} •
+                                    Uploaded {{ doc.created_at|date:"M d, Y" }}
+                                </div>
+                            </div>
+                            <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                                View
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No reports attached to this appointment.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Your Review</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-0">
+                        Review functionality will appear here once configured for completed appointments.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

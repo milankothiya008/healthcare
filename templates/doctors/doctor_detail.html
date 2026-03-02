@@ -19,6 +19,13 @@
                     {% endif %}
                     <h3>Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}</h3>
                     <p class="text-muted">{{ doctor.get_specialization_display }}</p>
+                    {% if doctor.average_rating %}
+                    <p>
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-star-fill"></i> {{ doctor.average_rating }} / 5
+                        </span>
+                    </p>
+                    {% endif %}
                     <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
                     <p><strong>Experience:</strong> {{ doctor.years_of_experience }} years</p>
                     <p><strong>Consultation Fee:</strong> ${{ doctor.consultation_fee }}</p>
@@ -37,7 +44,7 @@
                 <div class="card-header"><h5 class="mb-0">Book Appointment</h5></div>
                 <div class="card-body">
                     {% if user.role == 'PATIENT' and doctor_hospitals %}
-                    <form method="post" action="{% url 'appointments:book_normal' doctor.pk %}">
+                    <form method="post" action="{% url 'appointments:book_normal' doctor.pk %}" enctype="multipart/form-data">
                         {% csrf_token %}
                         {% if doctor_hospitals|length == 1 %}
                         <input type="hidden" name="hospital_id" value="{{ doctor_hospitals.0.id }}">
@@ -75,6 +82,14 @@
                         <div class="mb-3">
                             <label class="form-label">Reason for visit</label>
                             <textarea name="reason" class="form-control" rows="2" required placeholder="Brief reason for appointment"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Upload Medical Reports (optional)</label>
+                            <input type="file" name="reports" class="form-control" multiple
+                                   accept=".pdf,image/jpeg,image/png">
+                            <small class="text-muted">
+                                Allowed types: PDF, JPG, PNG. Max size 10 MB per file.
+                            </small>
                         </div>
                         <button type="submit" class="btn btn-primary">Book Appointment</button>
                     </form>

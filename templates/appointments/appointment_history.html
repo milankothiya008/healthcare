@@ -11,10 +11,24 @@
 
     <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
-            <a class="nav-link {% if tab == 'upcoming' %}active{% endif %}" href="?tab=upcoming">Upcoming ({{ upcoming_count }})</a>
+            <a class="nav-link {% if tab == 'upcoming' %}active{% endif %}" href="?tab=upcoming">
+                Upcoming ({{ upcoming_count }})
+            </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if tab == 'past' %}active{% endif %}" href="?tab=past">Past ({{ past_count }})</a>
+            <a class="nav-link {% if tab == 'today' %}active{% endif %}" href="?tab=today">
+                Today ({{ today_count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'past' %}active{% endif %}" href="?tab=past">
+                Past ({{ past_count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'cancelled' %}active{% endif %}" href="?tab=cancelled">
+                Cancelled ({{ cancelled_count }})
+            </a>
         </li>
     </ul>
 
@@ -31,9 +45,7 @@
                             <th>Time</th>
                             <th>Reason</th>
                             <th>Status</th>
-                            {% if tab == 'upcoming' %}
                             <th>Action</th>
-                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -52,16 +64,18 @@
                                 <span class="badge bg-danger">Emergency</span>
                                 {% endif %}
                             </td>
-                            {% if tab == 'upcoming' %}
                             <td>
-                                {% if apt.can_be_cancelled %}
+                                {% if apt.status == 'COMPLETED' %}
+                                <a href="{% url 'appointments:patient_detail' apt.pk %}" class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                                {% elif apt.can_be_cancelled %}
                                 <form method="post" action="{% url 'appointments:cancel' apt.pk %}" class="d-inline" onsubmit="return confirm('Cancel this appointment?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
                                 </form>
                                 {% endif %}
                             </td>
-                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -81,7 +95,11 @@
             </nav>
             {% endif %}
             {% else %}
-            <p class="text-muted mb-0">No {% if tab == 'upcoming' %}upcoming{% else %}past{% endif %} appointments.</p>
+            <p class="text-muted mb-0">
+                No
+                {% if tab == 'upcoming' %}upcoming{% elif tab == 'today' %}today{% elif tab == 'past' %}past{% else %}cancelled{% endif %}
+                appointments.
+            </p>
             {% endif %}
         </div>
     </div>

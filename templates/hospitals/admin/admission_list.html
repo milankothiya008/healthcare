@@ -42,31 +42,17 @@
                             </td>
                             <td>
                                 {% if adm.is_active %}
-                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#dischargeModal{{ adm.pk }}">Discharge</button>
-                                <div class="modal fade" id="dischargeModal{{ adm.pk }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form method="post" action="{% url 'hospitals:admin_discharge_patient' adm.pk %}">
-                                                {% csrf_token %}
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Discharge Patient</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>Patient: {{ adm.patient.get_full_name|default:adm.patient.username }}</p>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Discharge Date & Time</label>
-                                                        <input type="datetime-local" name="discharge_time" class="form-control" required>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <button type="submit" class="btn btn-primary">Confirm Discharge</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary discharge-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#dischargeModal"
+                                    data-action-url="{% url 'hospitals:admin_discharge_patient' adm.pk %}"
+                                    data-patient-name="{{ adm.patient.get_full_name|default:adm.patient.username }}"
+                                    data-min-datetime="{{ adm.admission_time|date:'Y-m-d\\TH:i' }}"
+                                >
+                                    Discharge
+                                </button>
                                 {% endif %}
                             </td>
                         </tr>
@@ -74,6 +60,7 @@
                     </tbody>
                 </table>
             </div>
+            
             {% if page_obj and page_obj.paginator.num_pages > 1 %}
             <nav class="mt-3">
                 <ul class="pagination justify-content-center mb-0">
@@ -83,10 +70,89 @@
                 </ul>
             </nav>
             {% endif %}
+
             {% else %}
             <p class="text-muted mb-0">No admission records.</p>
             {% endif %}
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="dischargeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Discharge Patient</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Patient: <span id="dischargePatientName"></span></p>
+                    <div class="mb-3">
+                        <label class="form-label">Discharge Date &amp; Time</label>
+                        <input
+                            type="datetime-local"
+                            name="discharge_time"
+                            class="form-control"
+                            id="dischargeDatetimeInput"
+                            required
+                        >
+                        <small class="text-muted">
+                            Must be on or after the admission time.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Confirm Discharge</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var modal = document.getElementById('dischargeModal');
+    if (!modal) return;
+
+    var form = modal.querySelector('form');
+    var patientSpan = document.getElementById('dischargePatientName');
+    var datetimeInput = document.getElementById('dischargeDatetimeInput');
+
+    // Attach click handlers to all discharge buttons
+    document.querySelectorAll('.discharge-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var actionUrl = this.getAttribute('data-action-url');
+            var patientName = this.getAttribute('data-patient-name') || '';
+            var minDatetime = this.getAttribute('data-min-datetime') || '';
+
+            if (actionUrl) {
+                form.setAttribute('action', actionUrl);
+            }
+            patientSpan.textContent = patientName;
+
+            // Set min to admission time and default to "now" (but not before min)
+            if (minDatetime) {
+                datetimeInput.setAttribute('min', minDatetime);
+            }
+            var now = new Date();
+            var pad = function (n) { return n < 10 ? '0' + n : n; };
+            var nowStr = now.getFullYear() + '-' +
+                pad(now.getMonth() + 1) + '-' +
+                pad(now.getDate()) + 'T' +
+                pad(now.getHours()) + ':' +
+                pad(now.getMinutes());
+            datetimeInput.value = nowStr;
+            if (minDatetime && nowStr < minDatetime) {
+                datetimeInput.value = minDatetime;
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

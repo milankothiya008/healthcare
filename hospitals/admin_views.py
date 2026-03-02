@@ -256,6 +256,28 @@ class HospitalAppointmentListView(HospitalRequiredMixin, ListView):
         return context
 
 
+class HospitalAppointmentDetailView(HospitalRequiredMixin, DetailView):
+    """Read-only detail view for a single appointment belonging to this hospital."""
+    model = Appointment
+    template_name = 'hospitals/admin/appointment_detail.html'
+    context_object_name = 'appointment'
+
+    def get_queryset(self):
+        hospital = get_hospital(self.request)
+        if not hospital:
+            return Appointment.objects.none()
+        return Appointment.objects.filter(
+            hospital=hospital
+        ).select_related('patient', 'doctor', 'hospital')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        apt = self.object
+        # Consultation notes and prescription should only be visible after completion
+        context['can_view_medical_details'] = apt.status == 'COMPLETED'
+        return context
+
+
 # Allowed status transitions: from_status -> [to_statuses]
 APPOINTMENT_STATUS_TRANSITIONS = {
     'PENDING': ['CONFIRMED', 'CANCELLED'],

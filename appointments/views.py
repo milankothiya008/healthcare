@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
@@ -11,6 +11,7 @@ from .models import Appointment
 from doctors.models import DoctorProfile
 from hospitals.models import Hospital, DoctorHospitalAssignment
 from accounts.mixins import PatientRequiredMixin
+from documents.models import Document
 
 
 class AppointmentHistoryView(PatientRequiredMixin, ListView):
@@ -21,35 +22,47 @@ class AppointmentHistoryView(PatientRequiredMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
+        """Return appointments filtered by tab, using consistent categorisation."""
         tab = self.request.GET.get('tab', 'upcoming')
         qs = Appointment.objects.filter(patient=self.request.user).select_related(
             'doctor', 'hospital', 'doctor__doctor_profile'
         ).order_by('-appointment_date', '-appointment_time')
 
         today = timezone.now().date()
+
+        if tab == 'cancelled':
+            return qs.filter(status='CANCELLED')
+
         if tab == 'past':
-            qs = qs.filter(appointment_date__lt=today)
-        else:
-            qs = qs.filter(
-                appointment_date__gte=today,
-                status__in=['PENDING', 'CONFIRMED']
+            # Past = strictly before today OR explicitly completed
+            return qs.filter(
+                Q(appointment_date__lt=today) | Q(status='COMPLETED')
             )
 
-        return qs
+        if tab == 'today':
+            return qs.filter(appointment_date=today)
+
+        # Default: upcoming
+        return qs.filter(
+            appointment_date__gt=today,
+            status__in=['PENDING', 'CONFIRMED']
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['tab'] = self.request.GET.get('tab', 'upcoming')
         today = timezone.now().date()
-        context['past_count'] = Appointment.objects.filter(
-            patient=self.request.user,
-            appointment_date__lt=today
+        base_qs = Appointment.objects.filter(patient=self.request.user)
+
+        context['tab'] = self.request.GET.get('tab', 'upcoming')
+        context['past_count'] = base_qs.filter(
+            Q(appointment_date__lt=today) | Q(status='COMPLETED')
         ).count()
-        context['upcoming_count'] = Appointment.objects.filter(
-            patient=self.request.user,
-            appointment_date__gte=today,
+        context['upcoming_count'] = base_qs.filter(
+            appointment_date__gt=today,
             status__in=['PENDING', 'CONFIRMED']
         ).count()
+        context['today_count'] = base_qs.filter(appointment_date=today).count()
+        context['cancelled_count'] = base_qs.filter(status='CANCELLED').count()
         return context
 
 
@@ -119,7 +132,7 @@ def book_normal_appointment(request, doctor_id):
                 messages.error(request, e)
             return redirect('appointments:book_normal', doctor_id=doctor_id)
 
-        # Check double booking
+        # Check double booking (global across hospitals)
         if Appointment.objects.filter(
             doctor=doctor.user,
             appointment_date=appointment_date,
@@ -129,7 +142,7 @@ def book_normal_appointment(request, doctor_id):
             messages.error(request, 'This time slot is already booked.')
             return redirect('appointments:book_normal', doctor_id=doctor_id)
 
-        Appointment.objects.create(
+        appointment = Appointment.objects.create(
             patient=request.user,
             doctor=doctor.user,
             hospital=hospital,
@@ -139,6 +152,27 @@ def book_normal_appointment(request, doctor_id):
             is_emergency=False,
             status='PENDING'
         )
+        # Optional: patient uploaded medical reports during booking
+        files = request.FILES.getlist('reports')
+        for f in files:
+            # Basic validation is handled in Document model / storage, but keep type guard here
+            name_lower = (f.name or '').lower()
+            if not (name_lower.endswith('.pdf') or name_lower.endswith('.jpg') or name_lower.endswith('.jpeg') or name_lower.endswith('.png')):
+                messages.warning(request, f'Skipped unsupported file type: {f.name}')
+                continue
+            if f.size and f.size > 10 * 1024 * 1024:  # 10 MB limit
+                messages.warning(request, f'Skipped file over 10 MB: {f.name}')
+                continue
+            Document.objects.create(
+                patient=request.user,
+                doctor=doctor.user,
+                hospital=hospital,
+                appointment=appointment,
+                document_type='OTHER',
+                title=f.name,
+                file=f,
+                uploaded_by=request.user,
+            )
         messages.success(request, 'Appointment booked successfully! Status: Pending.')
         return redirect('appointments:history')
 
@@ -223,6 +257,43 @@ def confirm_emergency_booking(request):
 
     messages.success(request, 'Emergency appointment booked successfully!')
     return redirect('appointments:history')
+
+
+class PatientAppointmentDetailView(PatientRequiredMixin, DetailView):
+    """Detailed view of a patient's own appointment.
+
+    Full medical details (notes, prescription, attached reports) are only
+    visible once the appointment has been marked COMPLETED.
+    """
+    model = Appointment
+    template_name = 'appointments/patient_appointment_detail.html'
+    context_object_name = 'appointment'
+
+    def get_queryset(self):
+        # Restrict strictly to the logged‑in patient
+        return Appointment.objects.filter(patient=self.request.user).select_related(
+            'doctor', 'hospital'
+        )
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Allow detail page only for completed / past appointments
+        if self.object.status != 'COMPLETED':
+            messages.error(request, 'Details are available only after the appointment is completed.')
+            return redirect('appointments:history')
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        apt = self.object
+        # Documents linked to this appointment (patient or doctor uploaded)
+        context['appointment_documents'] = Document.objects.filter(
+            appointment=apt,
+            patient=self.request.user
+        ).select_related('doctor', 'hospital')
+        # Flags for template visibility
+        context['can_view_medical_details'] = apt.status == 'COMPLETED'
+        return context
 
 
 def cancel_appointment(request, pk):

@@ -5,6 +5,7 @@ app_name = 'appointments'
 
 urlpatterns = [
     path('history/', views.AppointmentHistoryView.as_view(), name='history'),
+    path('detail/<int:pk>/', views.PatientAppointmentDetailView.as_view(), name='patient_detail'),
     path('book/normal/<int:doctor_id>/', views.book_normal_appointment, name='book_normal'),
     path('book/emergency/', views.emergency_hospital_list, name='emergency_booking'),
     path('book/emergency/confirm/', views.confirm_emergency_booking, name='confirm_emergency'),
