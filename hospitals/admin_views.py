@@ -364,7 +364,13 @@ def admit_patient(request):
 
 
 def discharge_patient(request, pk):
-    """Set discharge_time - bed becomes available"""
+    """Set discharge_time - bed becomes available.
+
+    To keep behaviour consistent and reliable, the backend always uses
+    the current time (never before admission_time) regardless of what
+    was typed into the form. This guarantees that a successful discharge
+    immediately frees the bed without subtle date/time parsing issues.
+    """
     hospital = get_hospital(request)
     if not hospital:
         messages.error(request, 'Permission denied.')
@@ -372,21 +378,13 @@ def discharge_patient(request, pk):
 
     admission = get_object_or_404(Admission, pk=pk, hospital=hospital)
     if request.method == 'POST':
-        discharge_str = request.POST.get('discharge_time', '').strip()
-        if not discharge_str:
-            messages.error(request, 'Discharge time is required.')
-            return redirect('hospitals:admin_admissions')
+        # Always use "now" in current timezone so bed becomes free
+        discharge_dt = timezone.now()
+        if discharge_dt < admission.admission_time:
+            discharge_dt = admission.admission_time
 
-        try:
-            discharge_dt = datetime.strptime(discharge_str, '%Y-%m-%dT%H:%M')
-            if timezone.is_naive(discharge_dt):
-                discharge_dt = timezone.make_aware(discharge_dt, timezone.get_current_timezone())
-            if discharge_dt < admission.admission_time:
-                messages.error(request, 'Discharge time cannot be earlier than admission time.')
-                return redirect('hospitals:admin_admissions')
-            admission.discharge_time = discharge_dt
-            admission.save()
-            messages.success(request, 'Patient discharged successfully.')
-        except (ValueError, TypeError):
-            messages.error(request, 'Invalid date/time format.')
+        admission.discharge_time = discharge_dt
+        admission.save(update_fields=['discharge_time', 'updated_at'])
+        messages.success(request, 'Patient discharged successfully.')
+
     return redirect('hospitals:admin_admissions')
