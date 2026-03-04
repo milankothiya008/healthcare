@@ -119,8 +119,14 @@ class DoctorDetailView(LoginRequiredMixin, DetailView):
         return context
 
     def _get_available_slots(self, doctor, appointment_date):
-        """Generate time slots within doctor's schedule. Booked slots are GLOBAL (any hospital):
-        if the doctor has 10 AM booked at Hospital A, 10 AM is unavailable at Hospital B too."""
+        """Generate time slots within doctor's schedule.
+
+        - Booked slots are GLOBAL per doctor (any hospital): if the doctor
+          has 10 AM booked at Hospital A, 10 AM is unavailable at Hospital B.
+        - Additionally, prevent patients from double-booking themselves:
+          any slot where the current patient already has an appointment
+          (with any doctor) for that date is also hidden.
+        """
         today = timezone.now().date()
         now_time = timezone.now().time()
 
@@ -132,6 +138,18 @@ class DoctorDetailView(LoginRequiredMixin, DetailView):
                 status__in=['PENDING', 'CONFIRMED']
             ).values_list('appointment_time', flat=True)
         )
+
+        # Patient-level conflict: times where current user already has an appointment that day
+        patient_booked = set()
+        user = getattr(self.request, 'user', None)
+        if user and user.is_authenticated and getattr(user, 'role', None) == 'PATIENT':
+            patient_booked = set(
+                Appointment.objects.filter(
+                    patient=user,
+                    appointment_date=appointment_date,
+                    status__in=['PENDING', 'CONFIRMED']
+                ).values_list('appointment_time', flat=True)
+            )
 
         slots = []
         current = doctor.available_from
@@ -145,7 +163,8 @@ class DoctorDetailView(LoginRequiredMixin, DetailView):
                 current = dt.time()
                 continue
 
-            if current not in booked:
+            # Skip if this time is taken either by this doctor or by the patient with another doctor
+            if current not in booked and current not in patient_booked:
                 slots.append(current)
 
             # Advance by slot duration

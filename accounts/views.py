@@ -451,6 +451,32 @@ class AdminDoctorProfileUpdateRequestListView(AdminRequiredMixin, ListView):
         return DoctorProfileUpdateRequest.objects.filter(status='PENDING').select_related('doctor__user').order_by('-created_at')
 
 
+class AdminDoctorProfileUpdateRequestDetailView(AdminRequiredMixin, DetailView):
+    """System Admin: view a single doctor profile update request (current vs new value)."""
+    model = DoctorProfileUpdateRequest
+    template_name = 'accounts/admin_doctor_profile_request_detail.html'
+    context_object_name = 'request_obj'
+
+    def get_queryset(self):
+        return DoctorProfileUpdateRequest.objects.select_related('doctor__user').all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        req = self.object
+        profile = req.doctor
+        current_value = None
+        new_value = None
+        if req.field_name in ('specialization', 'qualification', 'license_number'):
+            current_value = getattr(profile, req.field_name, '')
+            new_value = req.new_value_text
+        elif req.field_name == 'verification_document':
+            current_value = getattr(profile, 'verification_document', None)
+            new_value = req.new_value_file
+        context['current_value'] = current_value
+        context['new_value'] = new_value
+        return context
+
+
 def admin_approve_doctor_profile_request(request, pk):
     """Apply sensitive change to doctor profile and mark request approved"""
     if not request.user.is_authenticated or not request.user.is_admin():

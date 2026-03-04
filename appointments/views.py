@@ -132,7 +132,7 @@ def book_normal_appointment(request, doctor_id):
                 messages.error(request, e)
             return redirect('appointments:book_normal', doctor_id=doctor_id)
 
-        # Check double booking (global across hospitals)
+        # Check double booking for this doctor (global across hospitals)
         if Appointment.objects.filter(
             doctor=doctor.user,
             appointment_date=appointment_date,
@@ -140,6 +140,16 @@ def book_normal_appointment(request, doctor_id):
             status__in=['PENDING', 'CONFIRMED']
         ).exists():
             messages.error(request, 'This time slot is already booked.')
+            return redirect('appointments:book_normal', doctor_id=doctor_id)
+
+        # Prevent patient from booking two appointments at the same time (any doctor)
+        if Appointment.objects.filter(
+            patient=request.user,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
+            status__in=['PENDING', 'CONFIRMED']
+        ).exists():
+            messages.error(request, 'You already have an appointment at this time with another doctor.')
             return redirect('appointments:book_normal', doctor_id=doctor_id)
 
         appointment = Appointment.objects.create(

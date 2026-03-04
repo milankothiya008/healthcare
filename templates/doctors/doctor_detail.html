@@ -19,13 +19,6 @@
                     {% endif %}
                     <h3>Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}</h3>
                     <p class="text-muted">{{ doctor.get_specialization_display }}</p>
-                    {% if doctor.average_rating %}
-                    <p>
-                        <span class="badge bg-warning text-dark">
-                            <i class="bi bi-star-fill"></i> {{ doctor.average_rating }} / 5
-                        </span>
-                    </p>
-                    {% endif %}
                     <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
                     <p><strong>Experience:</strong> {{ doctor.years_of_experience }} years</p>
                     <p><strong>Consultation Fee:</strong> ${{ doctor.consultation_fee }}</p>

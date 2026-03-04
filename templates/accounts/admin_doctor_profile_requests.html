@@ -32,11 +32,12 @@
                             <td>{% if req.new_value_file %}File uploaded{% else %}{{ req.new_value_text|truncatewords:15 }}{% endif %}</td>
                             <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
                             <td>
-                                <form method="post" action="{% url 'accounts:admin_approve_doctor_profile_request' req.pk %}" class="d-inline">
+                                <a href="{% url 'accounts:admin_doctor_profile_request_detail' req.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+                                <form method="post" action="{% url 'accounts:admin_approve_doctor_profile_request' req.pk %}" class="d-inline ms-1">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                 </form>
-                                <form method="post" action="{% url 'accounts:admin_reject_doctor_profile_request' req.pk %}" class="d-inline" onsubmit="return confirm('Reject this update?');">
+                                <form method="post" action="{% url 'accounts:admin_reject_doctor_profile_request' req.pk %}" class="d-inline ms-1" onsubmit="return confirm('Reject this update?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
                                 </form>
